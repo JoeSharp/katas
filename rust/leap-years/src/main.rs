@@ -7,15 +7,18 @@ fn is_leap_year(year: u32) -> bool {
     let d100 = is_div(year, 100);
     let d400 = is_div(year, 400);
 
-    if d400 { return true; }
-    if !d100 && d4 { return true; }
+    if d400 {
+        return true;
+    }
+    if !d100 && d4 {
+        return true;
+    }
     false
 }
 
 fn main() {
     println!("Hello, world!");
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -31,10 +34,10 @@ mod tests {
 
     #[test]
     fn test_leap_year() {
-
         assert!(is_leap_year(2000));
         assert!(!is_leap_year(2001));
         assert!(is_leap_year(1996));
         assert!(!is_leap_year(1900));
     }
 }
+
