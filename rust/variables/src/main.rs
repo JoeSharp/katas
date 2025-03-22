@@ -5,6 +5,9 @@ fn mutability_1() {
     println!("x starts of as {}", x);
     x = 6;
     println!("x is now {}", x);
+
+    const Y: u8 = 237u8;
+    println!("y is {}", Y);
 }
 
 fn main() {
