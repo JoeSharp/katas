@@ -76,11 +76,10 @@ impl Board {
     fn iterate(&mut self) {
         let next_index = if self.index == 0 { 1 } else { 0 };
         let curr: Arr2d = self.contents[self.index];
-        let mut next: Arr2d = self.contents[next_index];
         for (r, row) in curr.iter().enumerate() {
             for (c, cell) in row.iter().enumerate() {
                 let n = count_neighbours(&curr, r, c);
-                next[r][c] = next_state((*cell, n));
+                self.contents[next_index][r][c] = next_state((*cell, n));
             }
         }
         self.index = next_index;
