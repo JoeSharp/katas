@@ -104,8 +104,17 @@ fn main() {
 
     for _ in 0..=10 {
         board.print();
-        board.iterate();
-    }
 
-    println!("Done");
+        println!("Done");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_next_state() {
+        assert!(next_state((true, 3)));
+    }
 }
