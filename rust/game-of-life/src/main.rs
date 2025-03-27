@@ -104,6 +104,7 @@ fn main() {
 
     for _ in 0..=10 {
         board.print();
+        board.iterate();
 
         println!("Done");
     }
