@@ -5,59 +5,58 @@ struct Board {
     contents: [Arr2d; 2],
 }
 
-fn cell_to_str(cell: bool) -> char {
-    if cell { 'X' } else { '-' }
-}
-
-type CellState = (bool, u8);
-
-fn next_state(state: CellState) -> bool {
-    match state {
-        (true, 0..=1) => false, // Underpopulation
-        (true, 2 | 3) => true,  // Lives on
-        (true, _) => false,     // Overpopulation
-        (false, 3) => true,     // Reproduction
-        (false, _) => false,
+mod game_of_life {
+    pub fn next_state(state: (bool, u8)) -> bool {
+        match state {
+            (true, 0..=1) => false, // Underpopulation
+            (true, 2 | 3) => true,  // Lives on
+            (true, _) => false,     // Overpopulation
+            (false, 3) => true,     // Reproduction
+            (false, _) => false,
+        }
     }
-}
-
-fn count_neighbours(arr2d: &Arr2d, r: usize, c: usize) -> u8 {
-    let mut n = 0;
-
-    let top = r > 0;
-    let left = c > 0;
-    let bottom = r < arr2d.len() - 1;
-    let right = c < arr2d[r].len() - 1;
-
-    if top && left && arr2d[r - 1][c - 1] {
-        n += 1;
+    pub fn cell_to_str(cell: bool) -> char {
+        if cell { 'X' } else { '-' }
     }
-    if top && arr2d[r - 1][c] {
-        n += 1;
-    }
-    if top && right && arr2d[r - 1][c + 1] {
-        n += 1;
-    }
-    if left && arr2d[r][c - 1] {
-        n += 1;
-    }
-    if right && arr2d[r][c + 1] {
-        n += 1;
-    }
-    if bottom && left && arr2d[r + 1][c - 1] {
-        n += 1;
-    }
-    if bottom && arr2d[r + 1][c] {
-        n += 1;
-    }
-    if bottom && right && arr2d[r + 1][c + 1] {
-        n += 1;
-    }
-
-    n
 }
 
 impl Board {
+    fn count_neighbours(arr2d: &Arr2d, r: usize, c: usize) -> u8 {
+        let mut n = 0;
+
+        let top = r > 0;
+        let left = c > 0;
+        let bottom = r < arr2d.len() - 1;
+        let right = c < arr2d[r].len() - 1;
+
+        if top && left && arr2d[r - 1][c - 1] {
+            n += 1;
+        }
+        if top && arr2d[r - 1][c] {
+            n += 1;
+        }
+        if top && right && arr2d[r - 1][c + 1] {
+            n += 1;
+        }
+        if left && arr2d[r][c - 1] {
+            n += 1;
+        }
+        if right && arr2d[r][c + 1] {
+            n += 1;
+        }
+        if bottom && left && arr2d[r + 1][c - 1] {
+            n += 1;
+        }
+        if bottom && arr2d[r + 1][c] {
+            n += 1;
+        }
+        if bottom && right && arr2d[r + 1][c + 1] {
+            n += 1;
+        }
+
+        n
+    }
+
     fn new_2d(size: usize) -> Arr2d {
         let mut rows: Arr2d = Vec::new();
 
@@ -71,6 +70,7 @@ impl Board {
 
         rows
     }
+
     fn new() -> Board {
         let contents: [Arr2d; 2] = [Self::new_2d(10), Self::new_2d(10)];
         Board { index: 0, contents }
@@ -89,8 +89,9 @@ impl Board {
         let next_index = if self.index == 0 { 1 } else { 0 };
         for r in 0..self.contents[self.index].len() {
             for c in 0..self.contents[self.index][r].len() {
-                let n = count_neighbours(&self.contents[self.index], r, c);
-                self.contents[next_index][r][c] = next_state((self.contents[self.index][r][c], n));
+                let n = Self::count_neighbours(&self.contents[self.index], r, c);
+                self.contents[next_index][r][c] =
+                    game_of_life::next_state((self.contents[self.index][r][c], n));
             }
         }
         self.index = next_index;
@@ -100,7 +101,7 @@ impl Board {
         println!("Board");
         for row in &self.contents[self.index] {
             for cell in row {
-                print!("{}", cell_to_str(*cell));
+                print!("{}", game_of_life::cell_to_str(*cell));
             }
             print!("\n");
         }
@@ -128,6 +129,6 @@ mod tests {
 
     #[test]
     fn test_next_state() {
-        assert!(next_state((true, 3)));
+        assert!(game_of_life::next_state((true, 3)));
     }
 }
