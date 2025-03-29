@@ -1,3 +1,6 @@
+use std::env;
+use std::fs;
+
 type Arr2d = Vec<Vec<bool>>;
 
 struct Board {
@@ -6,6 +9,9 @@ struct Board {
 }
 
 mod game_of_life {
+    const ALIVE: char = 'x';
+    const DEAD: char = '-';
+
     pub fn next_state(state: (bool, u8)) -> bool {
         match state {
             (true, 0..=1) => false, // Underpopulation
@@ -15,8 +21,13 @@ mod game_of_life {
             (false, _) => false,
         }
     }
+
+    pub fn cell_from_char(value: char) -> bool {
+        if let ALIVE = value { true } else { false }
+    }
+
     pub fn cell_to_str(cell: bool) -> char {
-        if cell { 'X' } else { '-' }
+        if cell { ALIVE } else { DEAD }
     }
 }
 
@@ -57,13 +68,13 @@ impl Board {
         n
     }
 
-    fn new_2d(size: usize) -> Arr2d {
+    fn new_2d_from_str(asstr: &str) -> Arr2d {
         let mut rows: Arr2d = Vec::new();
 
-        for _ in 0..size {
+        for row in asstr.split("\n") {
             let mut cells: Vec<bool> = Vec::new();
-            for _ in 0..size {
-                cells.push(false);
+            for cell in row.trim().chars() {
+                cells.push(game_of_life::cell_from_char(cell));
             }
             rows.push(cells);
         }
@@ -71,18 +82,9 @@ impl Board {
         rows
     }
 
-    fn new() -> Board {
-        let contents: [Arr2d; 2] = [Self::new_2d(10), Self::new_2d(10)];
+    fn from_str(asstr: &str) -> Board {
+        let contents: [Arr2d; 2] = [Self::new_2d_from_str(asstr), Self::new_2d_from_str(asstr)];
         Board { index: 0, contents }
-    }
-
-    fn populate(&mut self) {
-        self.contents[self.index][2][2] = true;
-        self.contents[self.index][2][3] = true;
-        self.contents[self.index][2][4] = true;
-        self.contents[self.index][1][3] = true;
-        self.contents[self.index][1][4] = true;
-        self.contents[self.index][1][5] = true;
     }
 
     fn iterate(&mut self) {
@@ -109,18 +111,21 @@ impl Board {
 }
 
 fn main() {
-    println!("Hello, world!");
+    let args: Vec<String> = env::args().collect();
 
-    let mut board: Board = Board::new();
+    let basefile = &args[1];
+    println!("Game of Life - Example {}", basefile);
 
-    board.populate();
+    let contents = fs::read_to_string(basefile).expect("Should have been able to read the file");
 
-    for _ in 0..=10 {
+    let mut board: Board = Board::from_str(&contents);
+
+    for _ in 0..=3 {
         board.print();
         board.iterate();
-
-        println!("Done");
     }
+
+    println!("Done");
 }
 
 #[cfg(test)]
