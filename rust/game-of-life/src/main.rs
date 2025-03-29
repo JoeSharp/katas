@@ -1,4 +1,5 @@
-type Arr2d = [[bool; 10]; 10];
+type Arr2d = Vec<Vec<bool>>;
+
 struct Board {
     index: usize,
     contents: [Arr2d; 2],
@@ -57,11 +58,22 @@ fn count_neighbours(arr2d: &Arr2d, r: usize, c: usize) -> u8 {
 }
 
 impl Board {
-    fn new() -> Board {
-        Board {
-            index: 0,
-            contents: [[[false; 10]; 10]; 2],
+    fn new_2d(size: usize) -> Arr2d {
+        let mut rows: Arr2d = Vec::new();
+
+        for _ in 0..size {
+            let mut cells: Vec<bool> = Vec::new();
+            for _ in 0..size {
+                cells.push(false);
+            }
+            rows.push(cells);
         }
+
+        rows
+    }
+    fn new() -> Board {
+        let contents: [Arr2d; 2] = [Self::new_2d(10), Self::new_2d(10)];
+        Board { index: 0, contents }
     }
 
     fn populate(&mut self) {
@@ -86,9 +98,9 @@ impl Board {
 
     fn print(&self) {
         println!("Board");
-        for row in self.contents[self.index] {
+        for row in &self.contents[self.index] {
             for cell in row {
-                print!("{}", cell_to_str(cell));
+                print!("{}", cell_to_str(*cell));
             }
             print!("\n");
         }
