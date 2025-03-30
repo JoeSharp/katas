@@ -1,11 +1,12 @@
 use std::env;
 use std::fs;
 
-type Arr2d = Vec<Vec<bool>>;
+mod arr2d;
+use arr2d::Arr2d;
 
 struct Board {
     index: usize,
-    contents: [Arr2d; 2],
+    contents: [Arr2d<bool>; 2],
 }
 
 mod game_of_life {
@@ -32,7 +33,7 @@ mod game_of_life {
 }
 
 impl Board {
-    fn count_neighbours(arr2d: &Arr2d, r: usize, c: usize) -> u8 {
+    fn count_neighbours(arr2d: &Arr2d<bool>, r: usize, c: usize) -> u8 {
         let mut n = 0;
 
         let top = r > 0;
@@ -68,8 +69,8 @@ impl Board {
         n
     }
 
-    fn new_2d_from_str(asstr: &str) -> Arr2d {
-        let mut rows: Arr2d = Vec::new();
+    fn new_2d_from_str(asstr: &str) -> Arr2d<bool> {
+        let mut rows: Arr2d<bool> = Vec::new();
 
         for row in asstr.split("\n") {
             let mut cells: Vec<bool> = Vec::new();
@@ -83,7 +84,8 @@ impl Board {
     }
 
     fn from_str(asstr: &str) -> Board {
-        let contents: [Arr2d; 2] = [Self::new_2d_from_str(asstr), Self::new_2d_from_str(asstr)];
+        let contents: [Arr2d<bool>; 2] =
+            [Self::new_2d_from_str(asstr), Self::new_2d_from_str(asstr)];
         Board { index: 0, contents }
     }
 
