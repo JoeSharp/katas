@@ -27,8 +27,8 @@ mod game_of_life {
         if let ALIVE = value { true } else { false }
     }
 
-    pub fn cell_to_str(cell: bool) -> char {
-        if cell { ALIVE } else { DEAD }
+    pub fn cell_to_str(cell: &bool) -> char {
+        if *cell { ALIVE } else { DEAD }
     }
 }
 
@@ -38,31 +38,31 @@ impl Board {
 
         let top = r > 0;
         let left = c > 0;
-        let bottom = r < arr2d.len() - 1;
-        let right = c < arr2d[r].len() - 1;
+        let bottom = r < arr2d.rows() - 1;
+        let right = c < arr2d.columns(r) - 1;
 
-        if top && left && arr2d[r - 1][c - 1] {
+        if top && left && *arr2d.get(r - 1, c - 1) {
             n += 1;
         }
-        if top && arr2d[r - 1][c] {
+        if top && *arr2d.get(r - 1, c) {
             n += 1;
         }
-        if top && right && arr2d[r - 1][c + 1] {
+        if top && right && *arr2d.get(r - 1, c + 1) {
             n += 1;
         }
-        if left && arr2d[r][c - 1] {
+        if left && *arr2d.get(r, c - 1) {
             n += 1;
         }
-        if right && arr2d[r][c + 1] {
+        if right && *arr2d.get(r, c + 1) {
             n += 1;
         }
-        if bottom && left && arr2d[r + 1][c - 1] {
+        if bottom && left && *arr2d.get(r + 1, c - 1) {
             n += 1;
         }
-        if bottom && arr2d[r + 1][c] {
+        if bottom && *arr2d.get(r + 1, c) {
             n += 1;
         }
-        if bottom && right && arr2d[r + 1][c + 1] {
+        if bottom && right && *arr2d.get(r + 1, c + 1) {
             n += 1;
         }
 
@@ -70,14 +70,14 @@ impl Board {
     }
 
     fn new_2d_from_str(asstr: &str) -> Arr2d<bool> {
-        let mut rows: Arr2d<bool> = Vec::new();
+        let mut rows: Arr2d<bool> = Arr2d::new();
 
         for row in asstr.split("\n") {
             let mut cells: Vec<bool> = Vec::new();
             for cell in row.trim().chars() {
                 cells.push(game_of_life::cell_from_char(cell));
             }
-            rows.push(cells);
+            rows.add_row(cells);
         }
 
         rows
@@ -91,11 +91,14 @@ impl Board {
 
     fn iterate(&mut self) {
         let next_index = if self.index == 0 { 1 } else { 0 };
-        for r in 0..self.contents[self.index].len() {
-            for c in 0..self.contents[self.index][r].len() {
+        for r in 0..self.contents[self.index].rows() {
+            for c in 0..self.contents[self.index].columns(r) {
                 let n = Self::count_neighbours(&self.contents[self.index], r, c);
-                self.contents[next_index][r][c] =
-                    game_of_life::next_state((self.contents[self.index][r][c], n));
+                self.contents[next_index].set(
+                    r,
+                    c,
+                    game_of_life::next_state((*self.contents[self.index].get(r, c), n)),
+                );
             }
         }
         self.index = next_index;
@@ -103,12 +106,7 @@ impl Board {
 
     fn print(&self) {
         println!("Board");
-        for row in &self.contents[self.index] {
-            for cell in row {
-                print!("{}", game_of_life::cell_to_str(*cell));
-            }
-            print!("\n");
-        }
+        self.contents[self.index].print(&game_of_life::cell_to_str);
     }
 }
 
