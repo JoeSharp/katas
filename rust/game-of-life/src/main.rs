@@ -23,8 +23,8 @@ mod game_of_life {
         }
     }
 
-    pub fn cell_from_char(value: char) -> bool {
-        if let ALIVE = value { true } else { false }
+    pub fn cell_from_char(value: &char) -> bool {
+        if let ALIVE = *value { true } else { false }
     }
 
     pub fn cell_to_str(cell: &bool) -> char {
@@ -69,23 +69,11 @@ impl Board {
         n
     }
 
-    fn new_2d_from_str(asstr: &str) -> Arr2d<bool> {
-        let mut rows: Arr2d<bool> = Arr2d::new();
-
-        for row in asstr.split("\n") {
-            let mut cells: Vec<bool> = Vec::new();
-            for cell in row.trim().chars() {
-                cells.push(game_of_life::cell_from_char(cell));
-            }
-            rows.add_row(cells);
-        }
-
-        rows
-    }
-
-    fn from_str(asstr: &str) -> Board {
-        let contents: [Arr2d<bool>; 2] =
-            [Self::new_2d_from_str(asstr), Self::new_2d_from_str(asstr)];
+    fn from_str(as_str: &str) -> Board {
+        let contents: [Arr2d<bool>; 2] = [
+            Arr2d::from_str(as_str, game_of_life::cell_from_char),
+            Arr2d::from_str(as_str, game_of_life::cell_from_char),
+        ];
         Board { index: 0, contents }
     }
 
@@ -106,7 +94,7 @@ impl Board {
 
     fn print(&self) {
         println!("Board");
-        self.contents[self.index].print(&game_of_life::cell_to_str);
+        self.contents[self.index].print(game_of_life::cell_to_str);
     }
 }
 
