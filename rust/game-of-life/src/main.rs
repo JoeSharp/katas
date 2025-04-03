@@ -23,11 +23,11 @@ impl GameOfLife {
         }
     }
 
-    pub fn cell_from_char(value: &char) -> bool {
+    fn cell_from_char(value: &char) -> bool {
         Self::ALIVE == *value
     }
 
-    pub fn cell_to_str(cell: &bool) -> char {
+    fn cell_to_str(cell: &bool) -> char {
         if *cell { Self::ALIVE } else { Self::DEAD }
     }
 
