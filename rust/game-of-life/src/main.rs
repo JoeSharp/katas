@@ -4,12 +4,12 @@ use std::fs;
 mod arr2d;
 use arr2d::Arr2d;
 
-struct Board {
+struct GameOfLife {
     index: usize,
     contents: [Arr2d<bool>; 2],
 }
 
-mod game_of_life {
+impl GameOfLife {
     const ALIVE: char = 'x';
     const DEAD: char = '-';
 
@@ -24,15 +24,13 @@ mod game_of_life {
     }
 
     pub fn cell_from_char(value: &char) -> bool {
-        if let ALIVE = *value { true } else { false }
+        Self::ALIVE == *value
     }
 
     pub fn cell_to_str(cell: &bool) -> char {
-        if *cell { ALIVE } else { DEAD }
+        if *cell { Self::ALIVE } else { Self::DEAD }
     }
-}
 
-impl Board {
     fn count_neighbours(arr2d: &Arr2d<bool>, r: usize, c: usize) -> u8 {
         let mut n = 0;
 
@@ -69,12 +67,12 @@ impl Board {
         n
     }
 
-    fn from_str(as_str: &str) -> Board {
+    fn from_str(as_str: &str) -> GameOfLife {
         let contents: [Arr2d<bool>; 2] = [
-            Arr2d::from_str(as_str, game_of_life::cell_from_char),
-            Arr2d::from_str(as_str, game_of_life::cell_from_char),
+            Arr2d::from_str(as_str, Self::cell_from_char),
+            Arr2d::from_str(as_str, Self::cell_from_char),
         ];
-        Board { index: 0, contents }
+        GameOfLife { index: 0, contents }
     }
 
     fn iterate(&mut self) {
@@ -85,7 +83,7 @@ impl Board {
                 self.contents[next_index].set(
                     r,
                     c,
-                    game_of_life::next_state((*self.contents[self.index].get(r, c), n)),
+                    Self::next_state((*self.contents[self.index].get(r, c), n)),
                 );
             }
         }
@@ -94,7 +92,7 @@ impl Board {
 
     fn print(&self) {
         println!("Board");
-        self.contents[self.index].print(game_of_life::cell_to_str);
+        self.contents[self.index].print(Self::cell_to_str);
     }
 }
 
@@ -110,7 +108,7 @@ fn main() {
 
     let contents = fs::read_to_string(basefile).expect("Should have been able to read the file");
 
-    let mut board: Board = Board::from_str(&contents);
+    let mut board: GameOfLife = GameOfLife::from_str(&contents);
 
     for _ in 0..=3 {
         board.print();
@@ -126,6 +124,6 @@ mod tests {
 
     #[test]
     fn test_next_state() {
-        assert!(game_of_life::next_state((true, 3)));
+        assert!(GameOfLife::next_state((true, 3)));
     }
 }
