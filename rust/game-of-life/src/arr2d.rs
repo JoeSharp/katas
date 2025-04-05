@@ -4,14 +4,32 @@ pub trait AsChar {
 }
 
 #[derive(Debug)]
-pub struct Arr2d<T: AsChar + PartialEq> {
+pub struct Arr2d<T: AsChar + PartialEq + Copy> {
     contents: Vec<Vec<T>>,
 }
 
-impl<T: AsChar + PartialEq> Arr2d<T> {
+impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
     pub fn new() -> Arr2d<T> {
         Arr2d {
             contents: Vec::new(),
+        }
+    }
+
+    pub fn expand(&mut self, width: usize, height: usize, filler: T) {
+        for row in self.contents.iter_mut() {
+            while row.len() < width {
+                row.push(filler);
+            }
+            while row.len() > width {
+                row.pop();
+            }
+        }
+
+        while self.contents.len() < height {
+            self.contents.push(vec![filler; width]);
+        }
+        while self.contents.len() > height {
+            self.contents.pop();
         }
     }
 
@@ -62,7 +80,7 @@ impl<T: AsChar + PartialEq> Arr2d<T> {
     }
 }
 
-impl<T: AsChar + PartialEq> PartialEq for Arr2d<T> {
+impl<T: AsChar + PartialEq + Copy> PartialEq for Arr2d<T> {
     fn eq(&self, other: &Self) -> bool {
         self.contents == other.contents
     }
@@ -71,6 +89,23 @@ impl<T: AsChar + PartialEq> PartialEq for Arr2d<T> {
 #[cfg(test)]
 mod tests {
     use super::Arr2d;
+
+    #[test]
+    fn test_expand() {
+        let mut a: Arr2d<bool> = Arr2d::new();
+        a.expand(3, 5, false);
+
+        let mut b: Arr2d<bool> = Arr2d::new();
+        b.contents = vec![
+            vec![false, false, false],
+            vec![false, false, false],
+            vec![false, false, false],
+            vec![false, false, false],
+            vec![false, false, false],
+        ];
+
+        assert_eq!(a, b);
+    }
 
     #[test]
     fn test_eq() {

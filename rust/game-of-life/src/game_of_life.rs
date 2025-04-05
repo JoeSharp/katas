@@ -29,6 +29,12 @@ impl GameOfLife {
     pub const ALIVE: char = 'x';
     pub const DEAD: char = '-';
 
+    pub fn expand(&mut self, width: usize, height: usize) {
+        for c in self.contents.iter_mut() {
+            c.expand(width, height, false);
+        }
+    }
+
     pub fn next_state(state: (bool, u8)) -> bool {
         match state {
             (true, 0..=1) => false, // Underpopulation

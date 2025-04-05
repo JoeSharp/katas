@@ -45,6 +45,7 @@ fn main() -> Result<(), io::Error> {
         terminal.draw(|f| {
             let size = f.size();
             let block = Block::default().borders(Borders::ALL).title("Game of Life");
+            board.expand((f.size().width - 2).into(), (f.size().height - 2).into());
 
             let as_str = board.to_str();
             let text: Vec<Spans<'_>> = as_str
