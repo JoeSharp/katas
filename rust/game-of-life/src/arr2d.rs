@@ -49,13 +49,16 @@ impl<T: AsChar + PartialEq> Arr2d<T> {
         self.contents.push(row);
     }
 
-    pub fn print(&self) {
+    pub fn to_str(&self) -> String {
+        let mut as_str = String::new();
         for row in &self.contents {
             for cell in row {
-                print!("{}", cell.to_char());
+                as_str.push(cell.to_char());
             }
-            print!("\n");
+            as_str.push_str("\n");
         }
+
+        as_str
     }
 }
 

@@ -59,9 +59,8 @@ impl GameOfLife {
         self.index = next_index;
     }
 
-    pub fn print(&self) {
-        println!("Game of Life");
-        self.contents[self.index].print();
+    pub fn to_str(&self) -> String {
+        self.contents[self.index].to_str()
     }
 
     fn current_state(&self) -> &Arr2d<bool> {
