@@ -20,6 +20,9 @@ use tui::{
     widgets::{Block, Borders, Paragraph},
 };
 
+const FRAME_TIME: u64 = 100;
+const FRAME_COUNT: u64 = 100;
+
 fn main() -> Result<(), io::Error> {
     let args: Vec<String> = env::args().collect();
 
@@ -41,11 +44,11 @@ fn main() -> Result<(), io::Error> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    for _ in 0..=10 {
+    for _ in 0..=FRAME_COUNT {
         terminal.draw(|f| {
             let size = f.size();
             let block = Block::default().borders(Borders::ALL).title("Game of Life");
-            board.expand((f.size().width - 2).into(), (f.size().height - 2).into());
+            board.expand((size.width - 2).into(), (size.height - 2).into());
 
             let as_str = board.to_str();
             let text: Vec<Spans<'_>> = as_str
@@ -60,7 +63,7 @@ fn main() -> Result<(), io::Error> {
             f.render_widget(paragraph, size);
         })?;
         board.iterate();
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(FRAME_TIME));
     }
 
     // restore terminal

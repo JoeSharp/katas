@@ -4,9 +4,9 @@ use crate::arr2d::AsChar;
 impl AsChar for bool {
     fn from_char(c: &char) -> Self {
         match *c {
-            GameOfLife::ALIVE => true,
             GameOfLife::DEAD => false,
-            _ => panic!("Invalid value for Game of Life {}", *c),
+            _ => true, //GameOfLife::ALIVE => true,
+                       //_ => panic!("Invalid value for Game of Life {}", *c),
         }
     }
 
@@ -26,7 +26,7 @@ pub struct GameOfLife {
 }
 
 impl GameOfLife {
-    pub const ALIVE: char = 'x';
+    pub const ALIVE: char = '\u{25a4}';
     pub const DEAD: char = '-';
 
     pub fn expand(&mut self, width: usize, height: usize) {
