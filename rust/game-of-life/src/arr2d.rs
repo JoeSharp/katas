@@ -1,24 +1,26 @@
-pub struct Arr2d<T> {
+pub trait AsChar {
+    fn to_char(&self) -> char;
+    fn from_char(c: &char) -> Self;
+}
+
+pub struct Arr2d<T: AsChar> {
     contents: Vec<Vec<T>>,
 }
 
-pub type ToChar<T> = fn(&T) -> char;
-pub type FromChar<T> = fn(&char) -> T;
-
-impl<T> Arr2d<T> {
+impl<T: AsChar> Arr2d<T> {
     pub fn new() -> Arr2d<T> {
         Arr2d {
             contents: Vec::new(),
         }
     }
 
-    pub fn from_str(as_str: &str, from_char: FromChar<T>) -> Arr2d<T> {
+    pub fn from_str(as_str: &str) -> Arr2d<T> {
         let mut rows: Arr2d<T> = Arr2d::new();
 
         for row in as_str.split("\n") {
             let mut cells: Vec<T> = Vec::new();
             for cell in row.trim().chars() {
-                cells.push(from_char(&cell));
+                cells.push(<T>::from_char(&cell));
             }
             rows.add_row(cells);
         }
@@ -46,10 +48,10 @@ impl<T> Arr2d<T> {
         self.contents.push(row);
     }
 
-    pub fn print(&self, to_char: ToChar<T>) {
+    pub fn print(&self) {
         for row in &self.contents {
             for cell in row {
-                print!("{}", to_char(cell));
+                print!("{}", cell.to_char());
             }
             print!("\n");
         }

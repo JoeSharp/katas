@@ -3,15 +3,30 @@ use std::fs;
 
 mod arr2d;
 use arr2d::Arr2d;
+use arr2d::AsChar;
 
 struct GameOfLife {
     index: usize,
     contents: [Arr2d<bool>; 2],
 }
 
+impl AsChar for bool {
+    fn from_char(c: &char) -> Self {
+        GameOfLife::ALIVE == *c
+    }
+
+    fn to_char(&self) -> char {
+        if *self {
+            GameOfLife::ALIVE
+        } else {
+            GameOfLife::DEAD
+        }
+    }
+}
+
 impl GameOfLife {
-    const ALIVE: char = 'x';
-    const DEAD: char = '-';
+    pub const ALIVE: char = 'x';
+    pub const DEAD: char = '-';
 
     pub fn next_state(state: (bool, u8)) -> bool {
         match state {
@@ -21,14 +36,6 @@ impl GameOfLife {
             (false, 3) => true,     // Reproduction
             (false, _) => false,
         }
-    }
-
-    fn cell_from_char(value: &char) -> bool {
-        Self::ALIVE == *value
-    }
-
-    fn cell_to_str(cell: &bool) -> char {
-        if *cell { Self::ALIVE } else { Self::DEAD }
     }
 
     fn count_neighbours(arr2d: &Arr2d<bool>, r: usize, c: usize) -> u8 {
@@ -68,10 +75,7 @@ impl GameOfLife {
     }
 
     fn from_str(as_str: &str) -> GameOfLife {
-        let contents: [Arr2d<bool>; 2] = [
-            Arr2d::from_str(as_str, Self::cell_from_char),
-            Arr2d::from_str(as_str, Self::cell_from_char),
-        ];
+        let contents: [Arr2d<bool>; 2] = [Arr2d::from_str(as_str), Arr2d::from_str(as_str)];
         GameOfLife { index: 0, contents }
     }
 
@@ -91,8 +95,8 @@ impl GameOfLife {
     }
 
     fn print(&self) {
-        println!("Board");
-        self.contents[self.index].print(Self::cell_to_str);
+        println!("Game of Life");
+        self.contents[self.index].print();
     }
 }
 
