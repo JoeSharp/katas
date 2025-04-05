@@ -3,11 +3,12 @@ pub trait AsChar {
     fn from_char(c: &char) -> Self;
 }
 
-pub struct Arr2d<T: AsChar> {
+#[derive(Debug)]
+pub struct Arr2d<T: AsChar + PartialEq> {
     contents: Vec<Vec<T>>,
 }
 
-impl<T: AsChar> Arr2d<T> {
+impl<T: AsChar + PartialEq> Arr2d<T> {
     pub fn new() -> Arr2d<T> {
         Arr2d {
             contents: Vec::new(),
@@ -55,5 +56,37 @@ impl<T: AsChar> Arr2d<T> {
             }
             print!("\n");
         }
+    }
+}
+
+impl<T: AsChar + PartialEq> PartialEq for Arr2d<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.contents == other.contents
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Arr2d;
+
+    #[test]
+    fn test_eq() {
+        let mut a: Arr2d<bool> = Arr2d::new();
+        let mut b: Arr2d<bool> = Arr2d::new();
+
+        for x in [&mut a, &mut b] {
+            x.add_row(vec![true, false]);
+        }
+
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_neq() {
+        let mut a: Arr2d<bool> = Arr2d::new();
+        let b: Arr2d<bool> = Arr2d::new();
+        a.add_row(vec![true, false]);
+
+        assert_ne!(a, b);
     }
 }
