@@ -138,8 +138,8 @@ impl GoBoard {
             Err(_) => return Err(ParseError::InvalidValue),
         };
         //let board = Arr2d::from_lines(lines[4..]);
-        let slice = lines[4..];
-        let board: Arr2d<GoCell> = match Arr2d::from_lines(slice.iter()) {
+        let slice = &lines[4..];
+        let board: Arr2d<GoCell> = match Arr2d::from_lines(slice.iter().copied()) {
             Ok(i) => i,
             Err(e) => return Err(e),
         };
