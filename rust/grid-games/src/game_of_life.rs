@@ -1,12 +1,13 @@
 use crate::arr2d::Arr2d;
 use crate::arr2d::AsChar;
+use crate::arr2d::ParseError;
 
 impl AsChar for bool {
-    fn from_char(c: &char) -> Self {
+    fn from_char(c: &char) -> Result<Self, ParseError> {
         match *c {
-            GameOfLife::DEAD => false,
-            GameOfLife::ALIVE => true,
-            _ => panic!("Invalid value for Game of Life {}", *c),
+            GameOfLife::DEAD => Ok(false),
+            GameOfLife::ALIVE => Ok(true),
+            _ => Err(ParseError::InvalidCharacter),
         }
     }
 
@@ -45,9 +46,17 @@ impl GameOfLife {
         }
     }
 
-    pub fn from_str(as_str: &str) -> GameOfLife {
-        let contents: [Arr2d<bool>; 2] = [Arr2d::from_str(as_str), Arr2d::from_str(as_str)];
-        GameOfLife { index: 0, contents }
+    pub fn from_str(as_str: &str) -> Result<GameOfLife, ParseError> {
+        let board0 = match Arr2d::from_str(as_str) {
+            Ok(b) => b,
+            Err(e) => return Err(e),
+        };
+        let board1 = match Arr2d::from_str(as_str) {
+            Ok(b) => b,
+            Err(e) => return Err(e),
+        };
+        let contents: [Arr2d<bool>; 2] = [board0, board1];
+        Ok(GameOfLife { index: 0, contents })
     }
 
     pub fn iterate(&mut self) {
@@ -131,26 +140,27 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn parse_panic() {
-        GameOfLife::from_str("F---");
+    fn invalid_char() {
+        let result = GameOfLife::from_str("F---");
+        assert_eq!(result, Err(ParseError::InvalidCharacter));
     }
 
-    fn create_gol_from_test_file(name: &str, index: u8) -> GameOfLife {
+    fn create_gol_from_test_file(name: &str, index: u8) -> Result<GameOfLife, ParseError> {
         let filename = format!("resources/tests/gol/{}/{}.txt", name, index);
 
-        GameOfLife::from_str(&fs::read_to_string(&filename).expect(&format!(
+        let file_contents = &fs::read_to_string(&filename).expect(&format!(
             "Expected to find hardcoded test resource at {}",
             filename
-        )))
+        ));
+        GameOfLife::from_str(file_contents)
     }
 
     #[test_case("blinker")]
     #[test_case("toad")]
     #[test_case("beacon")]
     fn test_oscillators(name: &str) {
-        let mut state1 = create_gol_from_test_file(name, 1);
-        let state2 = create_gol_from_test_file(name, 2);
+        let mut state1 = create_gol_from_test_file(name, 1).unwrap();
+        let state2 = create_gol_from_test_file(name, 2).unwrap();
         assert!(state1 != state2);
 
         // Iterate an odd number of times

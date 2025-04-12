@@ -1,6 +1,16 @@
-pub trait AsChar {
+#[derive(Debug, PartialEq)]
+pub enum ParseError {
+    InvalidCharacter,
+    NotEnoughLines,
+    NotEnoughChars,
+}
+
+pub trait AsChar
+where
+    Self: Sized,
+{
     fn to_char(&self) -> char;
-    fn from_char(c: &char) -> Self;
+    fn from_char(c: &char) -> Result<Self, ParseError>;
 }
 
 #[derive(Debug)]
@@ -33,21 +43,24 @@ impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
         }
     }
 
-    pub fn from_lines<'a>(lines: impl Iterator<Item = &'a str>) -> Arr2d<T> {
+    pub fn from_lines<'a>(lines: impl Iterator<Item = &'a str>) -> Result<Arr2d<T>, ParseError> {
         let mut rows: Arr2d<T> = Arr2d::new();
 
         for row in lines {
             let mut cells: Vec<T> = Vec::new();
             for cell in row.trim().chars() {
-                cells.push(<T>::from_char(&cell));
+                match <T>::from_char(&cell) {
+                    Ok(v) => cells.push(v),
+                    Err(e) => return Err(e),
+                }
             }
             rows.add_row(cells);
         }
 
-        rows
+        Ok(rows)
     }
 
-    pub fn from_str(as_str: &str) -> Arr2d<T> {
+    pub fn from_str(as_str: &str) -> Result<Arr2d<T>, ParseError> {
         Self::from_lines(as_str.split("\n"))
     }
 

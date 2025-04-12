@@ -1,5 +1,6 @@
 use crate::arr2d::Arr2d;
 use crate::arr2d::AsChar;
+use crate::arr2d::ParseError;
 use std::fmt;
 use std::str::FromStr;
 
@@ -7,14 +8,13 @@ use std::str::FromStr;
 enum GoPlayer {
     White,
     Black,
-    Unknown,
 }
 impl AsChar for GoPlayer {
-    fn from_char(c: &char) -> Self {
+    fn from_char(c: &char) -> Result<Self, ParseError> {
         match *c {
-            GoBoard::WHITE => GoPlayer::White,
-            GoBoard::BLACK => GoPlayer::Black,
-            _ => GoPlayer::Unknown,
+            GoBoard::WHITE => Ok(GoPlayer::White),
+            GoBoard::BLACK => Ok(GoPlayer::Black),
+            _ => Err(ParseError::InvalidCharacter),
         }
     }
 
@@ -22,7 +22,6 @@ impl AsChar for GoPlayer {
         match *self {
             GoPlayer::White => GoBoard::WHITE,
             GoPlayer::Black => GoBoard::BLACK,
-            _ => GoBoard::EMPTY,
         }
     }
 }
@@ -32,7 +31,6 @@ impl GoPlayer {
         match *self {
             GoPlayer::White => GoPlayer::Black,
             GoPlayer::Black => GoPlayer::White,
-            _ => GoPlayer::Unknown,
         }
     }
 }
@@ -53,19 +51,13 @@ impl fmt::Display for LastMove {
     }
 }
 
+#[derive(Debug)]
 struct GoError;
 
 // Implement std::fmt::Display for GoError
 impl fmt::Display for GoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "An Error Occurred, Please Try Again!") // user-facing output
-    }
-}
-
-// Implement std::fmt::Debug for GoError
-impl fmt::Debug for GoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{ file: {}, line: {} }}", file!(), line!()) // programmer-facing output
     }
 }
 
@@ -92,13 +84,14 @@ enum GoCell {
 }
 
 impl AsChar for GoCell {
-    fn from_char(c: &char) -> Self {
+    fn from_char(c: &char) -> Result<Self, ParseError> {
         match *c {
-            GoBoard::WHITE => GoCell::White,
-            GoBoard::WHITE_PENDING => GoCell::WhitePending,
-            GoBoard::BLACK => GoCell::Black,
-            GoBoard::BLACK_PENDING => GoCell::BlackPending,
-            _ => GoCell::Empty,
+            GoBoard::WHITE => Ok(GoCell::White),
+            GoBoard::WHITE_PENDING => Ok(GoCell::WhitePending),
+            GoBoard::BLACK => Ok(GoCell::Black),
+            GoBoard::BLACK_PENDING => Ok(GoCell::BlackPending),
+            GoBoard::EMPTY => Ok(GoCell::Empty),
+            _ => Err(ParseError::InvalidCharacter),
         }
     }
 
@@ -129,26 +122,32 @@ impl GoBoard {
     pub const BLACK_PENDING: char = 'b';
     pub const EMPTY: char = '-';
 
-    pub fn from_str(as_str: &str) -> GoBoard {
+    pub fn from_str(as_str: &str) -> Result<GoBoard, ParseError> {
         let lines = as_str.split("\n").collect::<Vec<&str>>();
 
         if lines.len() <= 4 {
-            panic!("Not enough lines in file")
+            return Err(ParseError::NotEnoughLines);
         }
-        let whos_turn = GoPlayer::from_char(&lines[0].chars().nth(0).unwrap());
+        let whos_turn: GoPlayer = match &lines[0].chars().nth(0) {
+            Some(c) => match GoPlayer::from_char(c) {
+                Ok(gp) => gp,
+                Err(e) => return Err(e),
+            },
+            None => return Err(ParseError::NotEnoughChars),
+        };
         let last_move: LastMove = lines[1].parse().unwrap();
         let white_captures: u16 = lines[2].parse().unwrap();
         let black_captures: u16 = lines[3].parse().unwrap();
         //let board = Arr2d::from_lines(lines[4..]);
         let board = Arr2d::new();
 
-        GoBoard {
+        Ok(GoBoard {
             whos_turn,
             last_move,
             white_captures,
             black_captures,
             board,
-        }
+        })
     }
 }
 

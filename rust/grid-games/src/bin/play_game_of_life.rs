@@ -32,7 +32,7 @@ fn main() -> Result<(), io::Error> {
 
     let contents = fs::read_to_string(basefile).expect("Should have been able to read the file");
 
-    let mut board: GameOfLife = GameOfLife::from_str(&contents);
+    let mut board: GameOfLife = GameOfLife::from_str(&contents).unwrap();
 
     // setup terminal
     enable_raw_mode()?;
