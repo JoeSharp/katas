@@ -3,6 +3,7 @@ pub enum ParseError {
     InvalidCharacter,
     NotEnoughLines,
     NotEnoughChars,
+    InvalidValue,
 }
 
 pub trait AsChar

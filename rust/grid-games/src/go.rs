@@ -51,25 +51,15 @@ impl fmt::Display for LastMove {
     }
 }
 
-#[derive(Debug)]
-struct GoError;
-
-// Implement std::fmt::Display for GoError
-impl fmt::Display for GoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "An Error Occurred, Please Try Again!") // user-facing output
-    }
-}
-
 impl FromStr for LastMove {
-    type Err = GoError;
+    type Err = ParseError;
 
-    fn from_str(s: &str) -> Result<Self, GoError> {
+    fn from_str(s: &str) -> Result<Self, ParseError> {
         match s {
             "ok" => Result::Ok(LastMove::Ok),
             "illegal_ko" => Result::Ok(LastMove::IllegalKo),
             "illegal_suicidal" => Result::Ok(LastMove::IllegalSuicidal),
-            _ => Err(GoError),
+            _ => Err(ParseError::InvalidValue),
         }
     }
 }
@@ -101,7 +91,7 @@ impl AsChar for GoCell {
             GoCell::WhitePending => GoBoard::WHITE_PENDING,
             GoCell::Black => GoBoard::BLACK,
             GoCell::BlackPending => GoBoard::BLACK_PENDING,
-            _ => GoBoard::EMPTY,
+            GoCell::Empty => GoBoard::EMPTY,
         }
     }
 }
@@ -135,11 +125,24 @@ impl GoBoard {
             },
             None => return Err(ParseError::NotEnoughChars),
         };
-        let last_move: LastMove = lines[1].parse().unwrap();
-        let white_captures: u16 = lines[2].parse().unwrap();
-        let black_captures: u16 = lines[3].parse().unwrap();
+        let last_move: LastMove = match lines[1].parse() {
+            Ok(i) => i,
+            Err(e) => return Err(e),
+        };
+        let white_captures: u16 = match lines[2].parse() {
+            Ok(i) => i,
+            Err(_) => return Err(ParseError::InvalidValue),
+        };
+        let black_captures: u16 = match lines[3].parse() {
+            Ok(i) => i,
+            Err(_) => return Err(ParseError::InvalidValue),
+        };
         //let board = Arr2d::from_lines(lines[4..]);
-        let board = Arr2d::new();
+        let slice = lines[4..];
+        let board: Arr2d<GoCell> = match Arr2d::from_lines(slice.iter()) {
+            Ok(i) => i,
+            Err(e) => return Err(e),
+        };
 
         Ok(GoBoard {
             whos_turn,
