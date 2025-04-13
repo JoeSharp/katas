@@ -26,6 +26,10 @@ impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
         }
     }
 
+    pub fn from_contents(contents: Vec<Vec<T>>) -> Arr2d<T> {
+        Arr2d { contents }
+    }
+
     pub fn expand(&mut self, width: usize, height: usize, filler: T) {
         for row in self.contents.iter_mut() {
             while row.len() < width {
@@ -48,6 +52,9 @@ impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
         let mut rows: Arr2d<T> = Arr2d::new();
 
         for row in lines {
+            if row.trim().len() == 0 {
+                continue;
+            }
             let mut cells: Vec<T> = Vec::new();
             for cell in row.trim().chars() {
                 match <T>::from_char(&cell) {
