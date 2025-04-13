@@ -52,9 +52,6 @@ impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
         let mut rows: Arr2d<T> = Arr2d::new();
 
         for row in lines {
-            if row.trim().len() == 0 {
-                continue;
-            }
             let mut cells: Vec<T> = Vec::new();
             for cell in row.trim().chars() {
                 match <T>::from_char(&cell) {
@@ -69,7 +66,12 @@ impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
     }
 
     pub fn from_str(as_str: &str) -> Result<Arr2d<T>, ParseError> {
-        Self::from_lines(as_str.split("\n"))
+        Self::from_lines(
+            as_str
+                .split("\n")
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty()),
+        )
     }
 
     pub fn rows(&self) -> usize {

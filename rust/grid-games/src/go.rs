@@ -117,13 +117,23 @@ impl GoBoard {
     fn read_kv<'a, 'b>(input: &'a str, name: &'b str) -> Result<&'a str, ParseError> {
         let parts: Vec<&str> = input.split("=").collect();
         match parts.len() {
-            2 => Ok(parts[1]),
+            2 => {
+                if parts[0] == name {
+                    Ok(parts[1])
+                } else {
+                    Err(ParseError::InvalidValue)
+                }
+            }
             _ => Err(ParseError::InvalidValue),
         }
     }
 
     pub fn from_str(as_str: &str) -> Result<GoBoard, ParseError> {
-        let lines: Vec<&str> = as_str.split("\n").collect::<Vec<&str>>();
+        let lines: Vec<&str> = as_str
+            .split("\n")
+            .map(|line| line.trim())
+            .filter(|line| !line.is_empty())
+            .collect::<Vec<&str>>();
 
         if lines.len() <= 4 {
             return Err(ParseError::NotEnoughLines);
@@ -198,6 +208,40 @@ mod tests {
     #[test]
     fn test_parse() {
         let state = create_go_from_test_file("parse/1.txt").unwrap();
+
+        use GoCell::*;
+
+        assert_eq!(
+            state,
+            GoBoard {
+                whos_turn: GoPlayer::White,
+                last_move: LastMove::Ok,
+                white_captures: 16,
+                black_captures: 23,
+                board: Arr2d::from_contents(vec![
+                    vec![Empty, White, Empty, Empty, Empty,],
+                    vec![Empty, Empty, White, Empty, Empty],
+                    vec![Empty, Black, Empty, Empty, Empty],
+                    vec![Empty, Black, Empty, BlackPending, Empty],
+                    vec![Empty, Empty, Empty, Empty, Empty],
+                ])
+            }
+        );
+    }
+
+    #[test]
+    fn test_parse_str() {
+        let as_str = r#"turn=W
+last_move=ok
+capturesW=16
+capturesB=23
+-W---
+--W--
+-B---
+-B-b-
+-----
+        "#;
+        let state = GoBoard::from_str(as_str).unwrap();
 
         use GoCell::*;
 
