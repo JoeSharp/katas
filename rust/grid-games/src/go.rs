@@ -9,6 +9,20 @@ enum GoPlayer {
     White,
     Black,
 }
+
+impl fmt::Display for GoPlayer {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                GoPlayer::White => GoBoard::WHITE,
+                GoPlayer::Black => GoBoard::BLACK,
+            }
+        )
+    }
+}
+
 impl AsChar for GoPlayer {
     fn from_char(c: &char) -> Result<Self, ParseError> {
         match *c {
@@ -71,6 +85,34 @@ enum GoCell {
     Black,
     BlackPending,
     Empty,
+}
+
+impl GoCell {
+    fn player(&self) -> Option<GoPlayer> {
+        match self {
+            GoCell::White => Some(GoPlayer::White),
+            GoCell::WhitePending => Some(GoPlayer::White),
+            GoCell::Black => Some(GoPlayer::Black),
+            GoCell::BlackPending => Some(GoPlayer::Black),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for GoCell {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                GoCell::White => GoBoard::WHITE,
+                GoCell::WhitePending => GoBoard::WHITE_PENDING,
+                GoCell::Black => GoBoard::BLACK,
+                GoCell::BlackPending => GoBoard::BLACK_PENDING,
+                GoCell::Empty => GoBoard::EMPTY,
+            }
+        )
+    }
 }
 
 impl AsChar for GoCell {
@@ -197,6 +239,14 @@ mod tests {
         let result = player.other();
 
         assert_eq!(result, expected)
+    }
+
+    fn test_cell_player() {
+        let result = GoCell::WhitePending
+            .player()
+            .expect("White Pending should have yielded result");
+
+        assert_eq!(GoPlayer::White, result);
     }
 
     fn create_go_from_test_file(name: &str) -> Result<GoBoard, ParseError> {

@@ -1,11 +1,25 @@
 use crate::arr2d::Arr2d;
 use crate::arr2d::AsChar;
 use crate::arr2d::ParseError;
+use std::fmt;
 
 #[derive(PartialEq, Clone, Debug, Copy)]
 pub enum GolCell {
     Alive,
     Dead,
+}
+
+impl fmt::Display for GolCell {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                GolCell::Alive => GameOfLife::ALIVE,
+                GolCell::Dead => GameOfLife::DEAD,
+            }
+        )
+    }
 }
 
 impl AsChar for GolCell {

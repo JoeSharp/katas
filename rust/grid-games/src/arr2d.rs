@@ -139,6 +139,16 @@ impl<T: AsChar + PartialEq + Copy> PartialEq for Arr2d<T> {
     }
 }
 
+impl AsChar for bool {
+    fn to_char(&self) -> char {
+        if *self { 'y' } else { 'n' }
+    }
+
+    fn from_char(as_char: &char) -> Result<bool, ParseError> {
+        Ok(*as_char == 'y')
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Arr2d;
