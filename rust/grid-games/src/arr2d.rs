@@ -14,9 +14,19 @@ where
     fn from_char(c: &char) -> Result<Self, ParseError>;
 }
 
+#[derive(Debug, PartialEq)]
+pub struct Cell<T>
+where
+    T: AsChar + PartialEq + Copy,
+{
+    row: usize,
+    column: usize,
+    value: T,
+}
+
 #[derive(Debug)]
 pub struct Arr2d<T: AsChar + PartialEq + Copy> {
-    contents: Vec<Vec<T>>,
+    contents: Vec<Vec<Cell<T>>>,
 }
 
 impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
@@ -27,29 +37,23 @@ impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
     }
 
     pub fn from_contents(contents: Vec<Vec<T>>) -> Arr2d<T> {
-        Arr2d { contents }
-    }
-
-    pub fn expand(&mut self, width: usize, height: usize, filler: T) {
-        for row in self.contents.iter_mut() {
-            while row.len() < width {
-                row.push(filler);
-            }
-            while row.len() > width {
-                row.pop();
-            }
-        }
-
-        while self.contents.len() < height {
-            self.contents.push(vec![filler; width]);
-        }
-        while self.contents.len() > height {
-            self.contents.pop();
+        Arr2d {
+            contents: contents
+                .iter()
+                .enumerate()
+                .map(|(row, row_c)| {
+                    return row_c
+                        .iter()
+                        .enumerate()
+                        .map(|(column, &value)| Cell { row, column, value })
+                        .collect();
+                })
+                .collect(),
         }
     }
 
     pub fn from_lines<'a>(lines: impl Iterator<Item = &'a str>) -> Result<Arr2d<T>, ParseError> {
-        let mut rows: Arr2d<T> = Arr2d::new();
+        let mut rows: Vec<Vec<T>> = Vec::new();
 
         for row in lines {
             let mut cells: Vec<T> = Vec::new();
@@ -59,10 +63,36 @@ impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
                     Err(e) => return Err(e),
                 }
             }
-            rows.add_row(cells);
+            rows.push(cells);
         }
 
-        Ok(rows)
+        Ok(Arr2d::from_contents(rows))
+    }
+
+    pub fn expand(&self, width: usize, height: usize, filler: T) -> Arr2d<T> {
+        let mut contents: Vec<Vec<T>> = self
+            .contents
+            .iter()
+            .map(|v| v.iter().map(|c| c.value).collect())
+            .collect();
+
+        for row in contents.iter_mut() {
+            while row.len() < width {
+                row.push(filler);
+            }
+            while row.len() > width {
+                row.pop();
+            }
+        }
+
+        while contents.len() < height {
+            contents.push(vec![filler; width]);
+        }
+        while contents.len() > height {
+            contents.pop();
+        }
+
+        Arr2d::from_contents(contents)
     }
 
     pub fn from_str(as_str: &str) -> Result<Arr2d<T>, ParseError> {
@@ -83,22 +113,18 @@ impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
     }
 
     pub fn get(&self, row: usize, col: usize) -> &T {
-        &self.contents[row][col]
+        &self.contents[row][col].value
     }
 
     pub fn set(&mut self, row: usize, col: usize, value: T) {
-        self.contents[row][col] = value;
-    }
-
-    pub fn add_row(&mut self, row: Vec<T>) {
-        self.contents.push(row);
+        self.contents[row][col].value = value;
     }
 
     pub fn to_str(&self) -> String {
         let mut as_str = String::new();
         for row in &self.contents {
             for cell in row {
-                as_str.push(cell.to_char());
+                as_str.push(cell.value.to_char());
             }
             as_str.push_str("\n");
         }
@@ -119,38 +145,32 @@ mod tests {
 
     #[test]
     fn test_expand() {
-        let mut a: Arr2d<bool> = Arr2d::new();
-        a.expand(3, 5, false);
+        let a: Arr2d<bool> = Arr2d::new();
+        let b = a.expand(3, 5, false);
 
-        let mut b: Arr2d<bool> = Arr2d::new();
-        b.contents = vec![
+        let c: Arr2d<bool> = Arr2d::from_contents(vec![
             vec![false, false, false],
             vec![false, false, false],
             vec![false, false, false],
             vec![false, false, false],
             vec![false, false, false],
-        ];
+        ]);
 
-        assert_eq!(a, b);
+        assert_eq!(b, c);
     }
 
     #[test]
     fn test_eq() {
-        let mut a: Arr2d<bool> = Arr2d::new();
-        let mut b: Arr2d<bool> = Arr2d::new();
-
-        for x in [&mut a, &mut b] {
-            x.add_row(vec![true, false]);
-        }
+        let a: Arr2d<bool> = Arr2d::from_contents(vec![vec![true, false]]);
+        let b: Arr2d<bool> = Arr2d::from_contents(vec![vec![true, false]]);
 
         assert_eq!(a, b);
     }
 
     #[test]
     fn test_neq() {
-        let mut a: Arr2d<bool> = Arr2d::new();
+        let a: Arr2d<bool> = Arr2d::from_contents(vec![vec![true, false]]);
         let b: Arr2d<bool> = Arr2d::new();
-        a.add_row(vec![true, false]);
 
         assert_ne!(a, b);
     }
