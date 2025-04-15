@@ -2,20 +2,25 @@ use crate::arr2d::Arr2d;
 use crate::arr2d::AsChar;
 use crate::arr2d::ParseError;
 
-impl AsChar for bool {
+#[derive(PartialEq, Clone, Debug, Copy)]
+pub enum GolCell {
+    Alive,
+    Dead,
+}
+
+impl AsChar for GolCell {
     fn from_char(c: &char) -> Result<Self, ParseError> {
         match *c {
-            GameOfLife::DEAD => Ok(false),
-            GameOfLife::ALIVE => Ok(true),
+            GameOfLife::DEAD => Ok(GolCell::Dead),
+            GameOfLife::ALIVE => Ok(GolCell::Alive),
             _ => Err(ParseError::InvalidCharacter),
         }
     }
 
     fn to_char(&self) -> char {
-        if *self {
-            GameOfLife::ALIVE
-        } else {
-            GameOfLife::DEAD
+        match *self {
+            GolCell::Alive => GameOfLife::ALIVE,
+            GolCell::Dead => GameOfLife::DEAD,
         }
     }
 }
@@ -23,7 +28,7 @@ impl AsChar for bool {
 #[derive(Debug)]
 pub struct GameOfLife {
     index: usize,
-    contents: [Arr2d<bool>; 2],
+    contents: [Arr2d<GolCell>; 2],
 }
 
 impl GameOfLife {
@@ -32,17 +37,17 @@ impl GameOfLife {
 
     pub fn expand(&mut self, width: usize, height: usize) {
         for c in self.contents.iter_mut() {
-            c.expand(width, height, false);
+            c.expand(width, height, GolCell::Dead);
         }
     }
 
-    pub fn next_state(state: (bool, u8)) -> bool {
+    pub fn next_state(state: (GolCell, u8)) -> GolCell {
         match state {
-            (true, 0..=1) => false, // Underpopulation
-            (true, 2 | 3) => true,  // Lives on
-            (true, _) => false,     // Overpopulation
-            (false, 3) => true,     // Reproduction
-            (false, _) => false,
+            (GolCell::Alive, 0..=1) => GolCell::Dead, // Underpopulation
+            (GolCell::Alive, 2 | 3) => GolCell::Alive, // Lives on
+            (GolCell::Alive, _) => GolCell::Dead,     // Overpopulation
+            (GolCell::Dead, 3) => GolCell::Alive,     // Reproduction
+            (GolCell::Dead, _) => GolCell::Dead,
         }
     }
 
@@ -55,7 +60,7 @@ impl GameOfLife {
             Ok(b) => b,
             Err(e) => return Err(e),
         };
-        let contents: [Arr2d<bool>; 2] = [board0, board1];
+        let contents: [Arr2d<GolCell>; 2] = [board0, board1];
         Ok(GameOfLife { index: 0, contents })
     }
 
@@ -78,11 +83,11 @@ impl GameOfLife {
         self.contents[self.index].to_str()
     }
 
-    fn current_state(&self) -> &Arr2d<bool> {
+    fn current_state(&self) -> &Arr2d<GolCell> {
         &self.contents[self.index]
     }
 
-    fn count_neighbours(arr2d: &Arr2d<bool>, r: usize, c: usize) -> u8 {
+    fn count_neighbours(arr2d: &Arr2d<GolCell>, r: usize, c: usize) -> u8 {
         let mut n = 0;
 
         let top = r > 0;
@@ -90,28 +95,28 @@ impl GameOfLife {
         let bottom = r < arr2d.rows() - 1;
         let right = c < arr2d.columns(r) - 1;
 
-        if top && left && *arr2d.get(r - 1, c - 1) {
+        if top && left && GolCell::Alive == *arr2d.get(r - 1, c - 1) {
             n += 1;
         }
-        if top && *arr2d.get(r - 1, c) {
+        if top && GolCell::Alive == *arr2d.get(r - 1, c) {
             n += 1;
         }
-        if top && right && *arr2d.get(r - 1, c + 1) {
+        if top && right && GolCell::Alive == *arr2d.get(r - 1, c + 1) {
             n += 1;
         }
-        if left && *arr2d.get(r, c - 1) {
+        if left && GolCell::Alive == *arr2d.get(r, c - 1) {
             n += 1;
         }
-        if right && *arr2d.get(r, c + 1) {
+        if right && GolCell::Alive == *arr2d.get(r, c + 1) {
             n += 1;
         }
-        if bottom && left && *arr2d.get(r + 1, c - 1) {
+        if bottom && left && GolCell::Alive == *arr2d.get(r + 1, c - 1) {
             n += 1;
         }
-        if bottom && *arr2d.get(r + 1, c) {
+        if bottom && GolCell::Alive == *arr2d.get(r + 1, c) {
             n += 1;
         }
-        if bottom && right && *arr2d.get(r + 1, c + 1) {
+        if bottom && right && GolCell::Alive == *arr2d.get(r + 1, c + 1) {
             n += 1;
         }
 
@@ -136,7 +141,7 @@ mod tests {
 
     #[test]
     fn test_next_state() {
-        assert!(GameOfLife::next_state((true, 3)));
+        assert_eq!(GolCell::Dead, GameOfLife::next_state((GolCell::Alive, 3)));
     }
 
     #[test]
