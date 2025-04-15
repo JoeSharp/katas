@@ -6,18 +6,10 @@ pub enum ParseError {
     InvalidValue,
 }
 
-pub trait AsChar
-where
-    Self: Sized,
-{
-    fn to_char(&self) -> char;
-    fn from_char(c: &char) -> Result<Self, ParseError>;
-}
-
 #[derive(Debug, PartialEq)]
 pub struct Cell<T>
 where
-    T: AsChar + PartialEq + Copy,
+    T: TryFrom<char> + Into<char> + PartialEq + Copy,
 {
     row: usize,
     column: usize,
@@ -25,11 +17,11 @@ where
 }
 
 #[derive(Debug)]
-pub struct Arr2d<T: AsChar + PartialEq + Copy> {
+pub struct Arr2d<T: TryFrom<char> + Into<char> + PartialEq + Copy> {
     contents: Vec<Vec<Cell<T>>>,
 }
 
-impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
+impl<T: TryFrom<char, Error = ParseError> + Into<char> + PartialEq + Copy> Arr2d<T> {
     pub fn new() -> Arr2d<T> {
         Arr2d {
             contents: Vec::new(),
@@ -58,7 +50,7 @@ impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
         for row in lines {
             let mut cells: Vec<T> = Vec::new();
             for cell in row.trim().chars() {
-                match <T>::from_char(&cell) {
+                match <T>::try_from(cell) {
                     Ok(v) => cells.push(v),
                     Err(e) => return Err(e),
                 }
@@ -124,7 +116,7 @@ impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
         let mut as_str = String::new();
         for row in &self.contents {
             for cell in row {
-                as_str.push(cell.value.to_char());
+                as_str.push(cell.value.into());
             }
             as_str.push_str("\n");
         }
@@ -133,37 +125,44 @@ impl<T: AsChar + PartialEq + Copy> Arr2d<T> {
     }
 }
 
-impl<T: AsChar + PartialEq + Copy> PartialEq for Arr2d<T> {
+impl<T: TryFrom<char> + Into<char> + PartialEq + Copy> PartialEq for Arr2d<T> {
     fn eq(&self, other: &Self) -> bool {
         self.contents == other.contents
-    }
-}
-
-impl AsChar for bool {
-    fn to_char(&self) -> char {
-        if *self { 'y' } else { 'n' }
-    }
-
-    fn from_char(as_char: &char) -> Result<bool, ParseError> {
-        Ok(*as_char == 'y')
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Arr2d;
+    use super::ParseError;
+
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    struct TestBool(bool);
+
+    impl TryFrom<char> for TestBool {
+        type Error = ParseError;
+
+        fn try_from(c: char) -> Result<TestBool, ParseError> {
+            Ok(TestBool(c == 'y'))
+        }
+    }
+    impl Into<char> for TestBool {
+        fn into(self) -> char {
+            if self.0 { 'y' } else { 'n' }
+        }
+    }
 
     #[test]
     fn test_expand() {
-        let a: Arr2d<bool> = Arr2d::new();
-        let b = a.expand(3, 5, false);
+        let a: Arr2d<TestBool> = Arr2d::new();
+        let b = a.expand(3, 5, TestBool(false));
 
-        let c: Arr2d<bool> = Arr2d::from_contents(vec![
-            vec![false, false, false],
-            vec![false, false, false],
-            vec![false, false, false],
-            vec![false, false, false],
-            vec![false, false, false],
+        let c: Arr2d<TestBool> = Arr2d::from_contents(vec![
+            vec![TestBool(false), TestBool(false), TestBool(false)],
+            vec![TestBool(false), TestBool(false), TestBool(false)],
+            vec![TestBool(false), TestBool(false), TestBool(false)],
+            vec![TestBool(false), TestBool(false), TestBool(false)],
+            vec![TestBool(false), TestBool(false), TestBool(false)],
         ]);
 
         assert_eq!(b, c);
@@ -171,16 +170,16 @@ mod tests {
 
     #[test]
     fn test_eq() {
-        let a: Arr2d<bool> = Arr2d::from_contents(vec![vec![true, false]]);
-        let b: Arr2d<bool> = Arr2d::from_contents(vec![vec![true, false]]);
+        let a: Arr2d<TestBool> = Arr2d::from_contents(vec![vec![TestBool(true), TestBool(false)]]);
+        let b: Arr2d<TestBool> = Arr2d::from_contents(vec![vec![TestBool(true), TestBool(false)]]);
 
         assert_eq!(a, b);
     }
 
     #[test]
     fn test_neq() {
-        let a: Arr2d<bool> = Arr2d::from_contents(vec![vec![true, false]]);
-        let b: Arr2d<bool> = Arr2d::new();
+        let a: Arr2d<TestBool> = Arr2d::from_contents(vec![vec![TestBool(true), TestBool(false)]]);
+        let b: Arr2d<TestBool> = Arr2d::new();
 
         assert_ne!(a, b);
     }

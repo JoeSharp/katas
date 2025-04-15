@@ -10,17 +10,17 @@ use std::{io, thread, time::Duration};
 const FRAME_TIME: u64 = 100;
 const FRAME_COUNT: u64 = 10;
 
-struct Config<'a> {
-    basefile: &'a str,
+struct Config {
+    basefile: String,
 }
 
-impl<'a> Config<'a> {
-    fn new(args: &'a [String]) -> Result<Config<'a>, &'static str> {
-        if args.len() < 2 {
-            return Err("Not enough arguments, you need to pass a filename");
-        }
+impl Config {
+    fn new(mut args: impl Iterator<Item = String>) -> Result<Config, &'static str> {
+        let basefile = match args.next() {
+            Some(x) => x,
+            None => return Err("Did not receive a basefile"),
+        };
 
-        let basefile = &args[1];
         Ok(Config { basefile })
     }
 }
@@ -45,9 +45,7 @@ fn run(config: Config) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() -> Result<(), io::Error> {
-    let args: Vec<String> = env::args().collect();
-
-    let config = Config::new(&args).unwrap_or_else(|err| {
+    let config = Config::new(env::args()).unwrap_or_else(|err| {
         eprintln!("{}", err);
         process::exit(1);
     });

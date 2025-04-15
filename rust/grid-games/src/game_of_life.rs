@@ -1,5 +1,4 @@
 use crate::arr2d::Arr2d;
-use crate::arr2d::AsChar;
 use crate::arr2d::ParseError;
 use std::fmt;
 
@@ -22,17 +21,21 @@ impl fmt::Display for GolCell {
     }
 }
 
-impl AsChar for GolCell {
-    fn from_char(c: &char) -> Result<Self, ParseError> {
-        match *c {
+impl TryFrom<char> for GolCell {
+    type Error = ParseError;
+
+    fn try_from(c: char) -> Result<GolCell, ParseError> {
+        match c {
             GameOfLife::DEAD => Ok(GolCell::Dead),
             GameOfLife::ALIVE => Ok(GolCell::Alive),
             _ => Err(ParseError::InvalidCharacter),
         }
     }
+}
 
-    fn to_char(&self) -> char {
-        match *self {
+impl Into<char> for GolCell {
+    fn into(self) -> char {
+        match self {
             GolCell::Alive => GameOfLife::ALIVE,
             GolCell::Dead => GameOfLife::DEAD,
         }
@@ -155,7 +158,8 @@ mod tests {
 
     #[test]
     fn test_next_state() {
-        assert_eq!(GolCell::Dead, GameOfLife::next_state((GolCell::Alive, 3)));
+        assert_eq!(GolCell::Dead, GameOfLife::next_state((GolCell::Alive, 1)));
+        assert_eq!(GolCell::Dead, GameOfLife::next_state((GolCell::Alive, 4)));
     }
 
     #[test]

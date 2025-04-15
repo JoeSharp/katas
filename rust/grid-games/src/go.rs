@@ -1,5 +1,4 @@
 use crate::arr2d::Arr2d;
-use crate::arr2d::AsChar;
 use crate::arr2d::ParseError;
 use std::fmt;
 use std::str::FromStr;
@@ -23,17 +22,21 @@ impl fmt::Display for GoPlayer {
     }
 }
 
-impl AsChar for GoPlayer {
-    fn from_char(c: &char) -> Result<Self, ParseError> {
-        match *c {
+impl TryFrom<char> for GoPlayer {
+    type Error = ParseError;
+
+    fn try_from(c: char) -> Result<GoPlayer, ParseError> {
+        match c {
             GoBoard::WHITE => Ok(GoPlayer::White),
             GoBoard::BLACK => Ok(GoPlayer::Black),
             _ => Err(ParseError::InvalidCharacter),
         }
     }
+}
 
-    fn to_char(&self) -> char {
-        match *self {
+impl Into<char> for GoPlayer {
+    fn into(self) -> char {
+        match self {
             GoPlayer::White => GoBoard::WHITE,
             GoPlayer::Black => GoBoard::BLACK,
         }
@@ -115,9 +118,11 @@ impl fmt::Display for GoCell {
     }
 }
 
-impl AsChar for GoCell {
-    fn from_char(c: &char) -> Result<Self, ParseError> {
-        match *c {
+impl TryFrom<char> for GoCell {
+    type Error = ParseError;
+
+    fn try_from(c: char) -> Result<GoCell, ParseError> {
+        match c {
             GoBoard::WHITE => Ok(GoCell::White),
             GoBoard::WHITE_PENDING => Ok(GoCell::WhitePending),
             GoBoard::BLACK => Ok(GoCell::Black),
@@ -126,9 +131,11 @@ impl AsChar for GoCell {
             _ => Err(ParseError::InvalidCharacter),
         }
     }
+}
 
-    fn to_char(&self) -> char {
-        match *self {
+impl Into<char> for GoCell {
+    fn into(self) -> char {
+        match self {
             GoCell::White => GoBoard::WHITE,
             GoCell::WhitePending => GoBoard::WHITE_PENDING,
             GoCell::Black => GoBoard::BLACK,
@@ -187,7 +194,7 @@ impl GoBoard {
 
         let whos_turn = Self::read_kv(&lines[0], "turn")?;
         let whos_turn: GoPlayer = match whos_turn.chars().nth(0) {
-            Some(c) => match GoPlayer::from_char(&c) {
+            Some(c) => match GoPlayer::try_from(c) {
                 Ok(gp) => gp,
                 Err(e) => return Err(e),
             },
