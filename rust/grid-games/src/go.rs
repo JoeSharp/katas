@@ -114,6 +114,10 @@ impl GoBoard {
 
     pub fn iterate(&mut self) {}
 
+    /**
+     * It would probably be nicer if it allowed reading of K/V pairs in whatever order, put them in
+     * a map and then we would look for specific keys
+     */
     fn read_kv<'a, 'b>(input: &'a str, name: &'b str) -> Result<&'a str, ParseError> {
         let parts: Vec<&str> = input.split("=").collect();
         match parts.len() {
@@ -231,7 +235,8 @@ mod tests {
 
     #[test]
     fn test_parse_str() {
-        let as_str = r#"turn=W
+        let as_str = r#"
+    turn=W
 last_move=ok
 capturesW=16
 capturesB=23
