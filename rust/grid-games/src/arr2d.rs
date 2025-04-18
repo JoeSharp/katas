@@ -86,6 +86,16 @@ where
         Ok(Arr2d::from_contents(rows))
     }
 
+    fn get_cell(&self, row: usize, column: usize) -> Result<&Cell<T>, &str> {
+        match &self.contents.get(row) {
+            Some(r) => match r.get(column) {
+                Some(c) => Ok(c),
+                None => return Err("Invalid column index"),
+            },
+            None => return Err("Invalid row index"),
+        }
+    }
+
     fn get_neighbours(&self, row: usize, column: usize) -> impl Iterator<Item = &Cell<T>> {
         [
             (Some(row), column.checked_sub(1)),
@@ -101,16 +111,6 @@ where
                 None
             }
         })
-    }
-
-    fn get_cell(&self, row: usize, column: usize) -> Result<&Cell<T>, &str> {
-        match &self.contents.get(row) {
-            Some(r) => match r.get(column) {
-                Some(c) => Ok(c),
-                None => return Err("Invalid column index"),
-            },
-            None => return Err("Invalid row index"),
-        }
     }
 
     pub fn flood_fill(
@@ -130,7 +130,7 @@ where
             Some(cell) => {
                 ids_seen.insert(cell.id);
                 self.get_neighbours(cell.row, cell.column)
-                    .filter(|c| !ids_seen.contains(&c.id))
+                    .filter(|c| !ids_seen.contains(&c.id) && c.value == start_cell.value)
                     .for_each(|c| {
                         to_visit.push(c);
                     });
@@ -278,6 +278,8 @@ mod tests {
     #[test_case((0, 0), vec![(0, 1, true), (1, 0, false)] )]
     #[test_case((1, 1), vec![(0, 1, true), (2, 1, false), (1, 0, false), (1, 2, false)] )]
     #[test_case((2, 2), vec![(2, 1, false), (1, 2, false), (2, 3, true)] )]
+    #[test_case((2, 4), vec![(2, 3, true), (1, 4, true)] )]
+    #[test_case((0, 4), vec![(0, 3, false), (1, 4, true)] )]
     fn test_get_neighbours((row, column): (usize, usize), expected: Vec<(usize, usize, bool)>) {
         // Given
         let input: Arr2d<TestBool> = Arr2d::from_str(
@@ -313,8 +315,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_flood_fill() {
+    #[test_case((1, 1, true), vec![(1, 1), (0, 0), (0, 1), (0, 2)])]
+    #[test_case((2, 1, false), vec![(2, 1), (2, 2), (1, 2), (1, 3), (0, 3), (0, 4)])]
+    fn test_flood_fill((row, column, value): (usize, usize, bool), expected: Vec<(usize, usize)>) {
         // Given
         let input: Arr2d<TestBool> = Arr2d::from_str(
             r#"
@@ -326,20 +329,29 @@ mod tests {
         .expect("Arr2d should have parsed test input");
 
         // When
-        let result: Vec<&Cell<TestBool>> = match input.flood_fill(1, 1) {
+        let result: Vec<&Cell<TestBool>> = match input.flood_fill(row, column) {
             Ok(i) => i.collect(),
             _ => panic!("Could not flood fill"),
         };
 
         // Then
+        assert_eq!(
+            result.len(),
+            expected.len(),
+            "Results should only contain expected cells"
+        );
         let id = 0;
-        for (row, column) in [(0, 0), (0, 1), (0, 2), (1, 1)] {
-            assert!(result.contains(&&Cell {
+        for (ex_row, ex_column) in expected {
+            let expected_cell = Cell {
                 id,
-                row,
-                column,
-                value: TestBool(true)
-            }));
+                row: ex_row,
+                column: ex_column,
+                value: TestBool(value),
+            };
+            assert!(
+                result.contains(&&expected_cell),
+                "result {result:?} does not contain {expected_cell:?}"
+            );
         }
     }
 
