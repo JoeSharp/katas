@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
     InvalidCharacter,
@@ -6,14 +8,24 @@ pub enum ParseError {
     InvalidValue,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Cell<T>
 where
     T: TryFrom<char> + Into<char> + PartialEq + Copy,
 {
+    id: u32,
     row: usize,
     column: usize,
     value: T,
+}
+
+impl<T> PartialEq for Cell<T>
+where
+    T: TryFrom<char> + Into<char> + PartialEq + Copy,
+{
+    fn eq(&self, b: &Cell<T>) -> bool {
+        self.row == b.row && self.column == b.column && self.value == b.value
+    }
 }
 
 #[derive(Debug)]
@@ -21,7 +33,10 @@ pub struct Arr2d<T: TryFrom<char> + Into<char> + PartialEq + Copy> {
     contents: Vec<Vec<Cell<T>>>,
 }
 
-impl<T: TryFrom<char, Error = ParseError> + Into<char> + PartialEq + Copy> Arr2d<T> {
+impl<T> Arr2d<T>
+where
+    T: TryFrom<char, Error = ParseError> + Into<char> + PartialEq + Copy,
+{
     pub fn new() -> Arr2d<T> {
         Arr2d {
             contents: Vec::new(),
@@ -29,16 +44,26 @@ impl<T: TryFrom<char, Error = ParseError> + Into<char> + PartialEq + Copy> Arr2d
     }
 
     pub fn from_contents(contents: Vec<Vec<T>>) -> Arr2d<T> {
+        let mut id = 0;
+
         Arr2d {
             contents: contents
                 .iter()
                 .enumerate()
                 .map(|(row, row_c)| {
-                    return row_c
+                    row_c
                         .iter()
                         .enumerate()
-                        .map(|(column, &value)| Cell { row, column, value })
-                        .collect();
+                        .map(|(column, &value)| {
+                            id += 1;
+                            return Cell {
+                                id,
+                                row,
+                                column,
+                                value,
+                            };
+                        })
+                        .collect()
                 })
                 .collect(),
         }
@@ -59,6 +84,61 @@ impl<T: TryFrom<char, Error = ParseError> + Into<char> + PartialEq + Copy> Arr2d
         }
 
         Ok(Arr2d::from_contents(rows))
+    }
+
+    fn get_neighbours(&self, row: usize, column: usize) -> impl Iterator<Item = &Cell<T>> {
+        [
+            (Some(row), column.checked_sub(1)),
+            (Some(row), column.checked_add(1)),
+            (row.checked_sub(1), Some(column)),
+            (row.checked_add(1), Some(column)),
+        ]
+        .into_iter()
+        .filter_map(|(r, c)| {
+            if let (Some(r), Some(c)) = (r, c) {
+                self.get_cell(r, c).ok()
+            } else {
+                None
+            }
+        })
+    }
+
+    fn get_cell(&self, row: usize, column: usize) -> Result<&Cell<T>, &str> {
+        match &self.contents.get(row) {
+            Some(r) => match r.get(column) {
+                Some(c) => Ok(c),
+                None => return Err("Invalid column index"),
+            },
+            None => return Err("Invalid row index"),
+        }
+    }
+
+    pub fn flood_fill(
+        &self,
+        row: usize,
+        column: usize,
+    ) -> Result<impl Iterator<Item = &Cell<T>>, &str> {
+        let mut to_visit: Vec<&Cell<T>> = Vec::new();
+        let mut ids_seen: HashSet<u32> = HashSet::new();
+        let start_cell = match self.get_cell(row, column) {
+            Ok(c) => c,
+            Err(e) => return Err(e),
+        };
+        to_visit.push(start_cell);
+
+        Ok(std::iter::from_fn(move || match to_visit.pop() {
+            Some(cell) => {
+                ids_seen.insert(cell.id);
+                self.get_neighbours(cell.row, cell.column)
+                    .filter(|c| !ids_seen.contains(&c.id))
+                    .for_each(|c| {
+                        to_visit.push(c);
+                    });
+
+                return Some(cell);
+            }
+            None => None,
+        }))
     }
 
     pub fn expand(&self, width: usize, height: usize, filler: T) -> Arr2d<T> {
@@ -134,7 +214,9 @@ impl<T: TryFrom<char> + Into<char> + PartialEq + Copy> PartialEq for Arr2d<T> {
 #[cfg(test)]
 mod tests {
     use super::Arr2d;
+    use super::Cell;
     use super::ParseError;
+    use test_case::test_case;
 
     #[derive(Clone, Copy, Debug, PartialEq)]
     struct TestBool(bool);
@@ -153,11 +235,119 @@ mod tests {
     }
 
     #[test]
-    fn test_expand() {
-        let a: Arr2d<TestBool> = Arr2d::new();
-        let b = a.expand(3, 5, TestBool(false));
+    fn test_from_str() {
+        // Given
+        let expected: Arr2d<TestBool> = Arr2d::from_contents(vec![
+            vec![
+                TestBool(true),
+                TestBool(true),
+                TestBool(true),
+                TestBool(false),
+                TestBool(false),
+            ],
+            vec![
+                TestBool(false),
+                TestBool(true),
+                TestBool(false),
+                TestBool(false),
+                TestBool(true),
+            ],
+            vec![
+                TestBool(true),
+                TestBool(false),
+                TestBool(false),
+                TestBool(true),
+                TestBool(false),
+            ],
+        ]);
 
-        let c: Arr2d<TestBool> = Arr2d::from_contents(vec![
+        // When
+        let result: Arr2d<TestBool> = Arr2d::from_str(
+            r#"
+            yyynn
+            nynny
+            ynnyn
+"#,
+        )
+        .expect("Arr2d should have parsed test input");
+
+        // Then
+        assert_eq!(result, expected);
+    }
+
+    #[test_case((0, 0), vec![(0, 1, true), (1, 0, false)] )]
+    #[test_case((1, 1), vec![(0, 1, true), (2, 1, false), (1, 0, false), (1, 2, false)] )]
+    #[test_case((2, 2), vec![(2, 1, false), (1, 2, false), (2, 3, true)] )]
+    fn test_get_neighbours((row, column): (usize, usize), expected: Vec<(usize, usize, bool)>) {
+        // Given
+        let input: Arr2d<TestBool> = Arr2d::from_str(
+            r#"
+            yyynn
+            nynny
+            ynnyn
+"#,
+        )
+        .expect("Arr2d should have parsed test input");
+
+        // When
+        let result: Vec<&Cell<TestBool>> = input.get_neighbours(row, column).collect();
+
+        // Then
+        assert_eq!(
+            result.len(),
+            expected.len(),
+            "Results should only contain expected cells"
+        );
+        let id = 0;
+        for (n_row, n_column, value) in expected {
+            let expected_cell = Cell {
+                id,
+                row: n_row,
+                column: n_column,
+                value: TestBool(value),
+            };
+            assert!(
+                result.contains(&&expected_cell),
+                "result {result:?} does not contain {expected_cell:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_flood_fill() {
+        // Given
+        let input: Arr2d<TestBool> = Arr2d::from_str(
+            r#"
+            yyynn
+            nynny
+            ynnyn
+"#,
+        )
+        .expect("Arr2d should have parsed test input");
+
+        // When
+        let result: Vec<&Cell<TestBool>> = match input.flood_fill(1, 1) {
+            Ok(i) => i.collect(),
+            _ => panic!("Could not flood fill"),
+        };
+
+        // Then
+        let id = 0;
+        for (row, column) in [(0, 0), (0, 1), (0, 2), (1, 1)] {
+            assert!(result.contains(&&Cell {
+                id,
+                row,
+                column,
+                value: TestBool(true)
+            }));
+        }
+    }
+
+    #[test]
+    fn test_expand() {
+        // Given
+        let a: Arr2d<TestBool> = Arr2d::new();
+        let expected: Arr2d<TestBool> = Arr2d::from_contents(vec![
             vec![TestBool(false), TestBool(false), TestBool(false)],
             vec![TestBool(false), TestBool(false), TestBool(false)],
             vec![TestBool(false), TestBool(false), TestBool(false)],
@@ -165,7 +355,11 @@ mod tests {
             vec![TestBool(false), TestBool(false), TestBool(false)],
         ]);
 
-        assert_eq!(b, c);
+        // When
+        let result = a.expand(3, 5, TestBool(false));
+
+        // Then
+        assert_eq!(expected, result);
     }
 
     #[test]
