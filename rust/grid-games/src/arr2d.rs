@@ -14,9 +14,23 @@ where
     T: TryFrom<char> + Into<char> + PartialEq + Copy,
 {
     id: u32,
-    row: usize,
-    column: usize,
-    value: T,
+    pub row: usize,
+    pub column: usize,
+    pub value: T,
+}
+
+impl<T> Cell<T>
+where
+    T: TryFrom<char> + Into<char> + PartialEq + Copy,
+{
+    pub fn from(row: usize, column: usize, value: T) -> Cell<T> {
+        Cell {
+            id: 0,
+            row,
+            column,
+            value,
+        }
+    }
 }
 
 impl<T> PartialEq for Cell<T>
@@ -86,7 +100,7 @@ where
         Ok(Arr2d::from_contents(rows))
     }
 
-    fn get_cell(&self, row: usize, column: usize) -> Result<&Cell<T>, &str> {
+    pub fn get_cell(&self, row: usize, column: usize) -> Result<&Cell<T>, &str> {
         match &self.contents.get(row) {
             Some(r) => match r.get(column) {
                 Some(c) => Ok(c),
@@ -96,7 +110,7 @@ where
         }
     }
 
-    fn get_neighbours(&self, row: usize, column: usize) -> impl Iterator<Item = &Cell<T>> {
+    pub fn get_neighbours(&self, row: usize, column: usize) -> impl Iterator<Item = &Cell<T>> {
         [
             (Some(row), column.checked_sub(1)),
             (Some(row), column.checked_add(1)),
@@ -113,6 +127,26 @@ where
         })
     }
 
+    pub fn get_perimeter(
+        &self,
+        row: usize,
+        column: usize,
+    ) -> Result<impl Iterator<Item = &Cell<T>>, &str> {
+        let mut seen = HashSet::new();
+        let start_cell = match self.get_cell(row, column) {
+            Ok(c) => c,
+            Err(e) => return Err(e),
+        };
+
+        match self.flood_fill(row, column) {
+            Ok(c) => Ok(c
+                .flat_map(|cell| self.get_neighbours(cell.row, cell.column))
+                .filter(|cell| cell.value != start_cell.value)
+                .filter(move |cell| seen.insert(cell.id))),
+            Err(e) => Err(e),
+        }
+    }
+
     pub fn flood_fill(
         &self,
         row: usize,
@@ -125,15 +159,13 @@ where
             Err(e) => return Err(e),
         };
         to_visit.push(start_cell);
+        ids_seen.insert(start_cell.id);
 
         Ok(std::iter::from_fn(move || match to_visit.pop() {
             Some(cell) => {
-                ids_seen.insert(cell.id);
                 self.get_neighbours(cell.row, cell.column)
-                    .filter(|c| !ids_seen.contains(&c.id) && c.value == start_cell.value)
-                    .for_each(|c| {
-                        to_visit.push(c);
-                    });
+                    .filter(|c| ids_seen.insert(c.id) && c.value == start_cell.value)
+                    .for_each(|c| to_visit.push(c));
 
                 return Some(cell);
             }
@@ -218,6 +250,16 @@ mod tests {
     use super::ParseError;
     use test_case::test_case;
 
+    type Coordinate = (usize, usize);
+    type ExpectedCell = (usize, usize, bool);
+
+    fn ex_cells_with_value(coordinates: Vec<Coordinate>, value: bool) -> Vec<ExpectedCell> {
+        coordinates
+            .into_iter()
+            .map(|(row, column)| (row, column, value))
+            .collect()
+    }
+
     #[derive(Clone, Copy, Debug, PartialEq)]
     struct TestBool(bool);
 
@@ -280,7 +322,7 @@ mod tests {
     #[test_case((2, 2), vec![(2, 1, false), (1, 2, false), (2, 3, true)] )]
     #[test_case((2, 4), vec![(2, 3, true), (1, 4, true)] )]
     #[test_case((0, 4), vec![(0, 3, false), (1, 4, true)] )]
-    fn test_get_neighbours((row, column): (usize, usize), expected: Vec<(usize, usize, bool)>) {
+    fn test_get_neighbours((row, column): Coordinate, expected: Vec<ExpectedCell>) {
         // Given
         let input: Arr2d<TestBool> = Arr2d::from_str(
             r#"
@@ -295,29 +337,35 @@ mod tests {
         let result: Vec<&Cell<TestBool>> = input.get_neighbours(row, column).collect();
 
         // Then
-        assert_eq!(
-            result.len(),
-            expected.len(),
-            "Results should only contain expected cells"
-        );
-        let id = 0;
-        for (n_row, n_column, value) in expected {
-            let expected_cell = Cell {
-                id,
-                row: n_row,
-                column: n_column,
-                value: TestBool(value),
-            };
-            assert!(
-                result.contains(&&expected_cell),
-                "result {result:?} does not contain {expected_cell:?}"
-            );
-        }
+        assert_cells(&result, expected);
+    }
+
+    #[test_case((1, 1), vec![(1, 0, false), (0, 3, false), (2, 1, false), (1, 2, false)])]
+    #[test_case((2, 1), vec![(2, 0, true), (2, 3, true), (1, 1, true), (1, 4, true), (0, 2, true)])]
+    fn test_get_perimeter((row, column): Coordinate, expected: Vec<ExpectedCell>) {
+        // Given
+        let input: Arr2d<TestBool> = Arr2d::from_str(
+            r#"
+            yyynn
+            nynny
+            ynnyn
+"#,
+        )
+        .expect("Arr2d should have parsed test input");
+
+        // When
+        let result: Vec<&Cell<TestBool>> = match input.get_perimeter(row, column) {
+            Ok(i) => i.collect(),
+            _ => panic!("Could not flood fill"),
+        };
+
+        // Then
+        assert_cells(&result, expected);
     }
 
     #[test_case((1, 1, true), vec![(1, 1), (0, 0), (0, 1), (0, 2)])]
     #[test_case((2, 1, false), vec![(2, 1), (2, 2), (1, 2), (1, 3), (0, 3), (0, 4)])]
-    fn test_flood_fill((row, column, value): (usize, usize, bool), expected: Vec<(usize, usize)>) {
+    fn test_flood_fill((row, column, value): ExpectedCell, expected: Vec<Coordinate>) {
         // Given
         let input: Arr2d<TestBool> = Arr2d::from_str(
             r#"
@@ -335,19 +383,18 @@ mod tests {
         };
 
         // Then
+        let expected_cells = ex_cells_with_value(expected, value);
+        assert_cells(&result, expected_cells);
+    }
+
+    fn assert_cells(result: &Vec<&Cell<TestBool>>, expected: Vec<ExpectedCell>) {
         assert_eq!(
-            result.len(),
             expected.len(),
+            result.len(),
             "Results should only contain expected cells"
         );
-        let id = 0;
-        for (ex_row, ex_column) in expected {
-            let expected_cell = Cell {
-                id,
-                row: ex_row,
-                column: ex_column,
-                value: TestBool(value),
-            };
+        for (ex_row, ex_column, value) in expected {
+            let expected_cell = Cell::from(ex_row, ex_column, TestBool(value));
             assert!(
                 result.contains(&&expected_cell),
                 "result {result:?} does not contain {expected_cell:?}"

@@ -1,4 +1,5 @@
 use crate::arr2d::Arr2d;
+use crate::arr2d::Cell;
 use crate::arr2d::ParseError;
 use std::fmt;
 use std::str::FromStr;
@@ -233,6 +234,17 @@ impl GoBoard {
             board,
         })
     }
+
+    fn get_liberties(
+        &self,
+        row: usize,
+        column: usize,
+    ) -> Result<impl Iterator<Item = &Cell<GoCell>>, &str> {
+        match self.board.get_perimeter(row, column) {
+            Ok(p) => Ok(p.filter(|c| c.value == GoCell::Empty)),
+            _ => Err("Could not retrieve perimeter of {row}, {column}"),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -246,14 +258,6 @@ mod tests {
         let result = player.other();
 
         assert_eq!(result, expected)
-    }
-
-    fn test_cell_player() {
-        let result = GoCell::WhitePending
-            .player()
-            .expect("White Pending should have yielded result");
-
-        assert_eq!(GoPlayer::White, result);
     }
 
     fn create_go_from_test_file(name: &str) -> Result<GoBoard, ParseError> {
@@ -323,6 +327,39 @@ capturesB=23
                 ])
             }
         );
+    }
+
+    #[test]
+    fn test_get_liberties() {
+        // Given
+        let as_str = r#"
+    turn=W
+last_move=ok
+capturesW=16
+capturesB=23
+-W-W-
+W-W--
+WBBW-
+WB-bW
+WWWW-
+        "#;
+        let state = GoBoard::from_str(as_str).unwrap();
+
+        // When
+        let result: Vec<&Cell<GoCell>> = match state.get_liberties(2, 1) {
+            Ok(p) => p.collect(),
+            _ => panic!("Could not get liberties"),
+        };
+
+        // Then
+        for (exp_row, exp_column) in [(1, 1), (3, 2)] {
+            let exp_cell: Cell<GoCell> = Cell::from(exp_row, exp_column, GoCell::Empty);
+
+            assert!(
+                result.contains(&&exp_cell),
+                "Result {result:?} does not contain {exp_cell:?}"
+            );
+        }
     }
 
     #[test_case("captures/simple_1")]
