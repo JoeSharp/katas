@@ -180,16 +180,38 @@ impl GoBoard {
     pub const BLACK_PENDING: char = 'b';
     pub const EMPTY: char = '-';
 
-    pub fn iterate(&mut self) -> Result<(), GoBoardError> {
-        let cell = match self
-            .board
+    fn locate_pending(&self) -> Option<&Cell<GoCell>> {
+        self.board
             .all_cells()
             .filter(|c| match c.value() {
                 GoCell::WhitePending | GoCell::BlackPending => true,
                 _ => false,
             })
             .next()
-        {
+    }
+
+    fn calculate_captures(
+        &self,
+        from: &Cell<GoCell>,
+        opponent: GoPlayer,
+    ) -> impl Iterator<Item = &Cell<GoCell>> {
+        let opponent_cell: GoCell = opponent.into();
+        self.board
+            .get_neighbours(from.row(), from.column())
+            .filter(move |neighbour| neighbour.value() == opponent_cell)
+            .filter(|neighbour| {
+                self.has_liberties(neighbour.row(), neighbour.column())
+                    .unwrap()
+            })
+            .flat_map(|captured_neighbour| {
+                self.board
+                    .flood_fill(captured_neighbour.row(), captured_neighbour.column())
+                    .unwrap()
+            })
+    }
+
+    pub fn iterate(&mut self) -> Result<(), GoBoardError> {
+        let cell = match self.locate_pending() {
             Some(c) => c,
             None => return Err(GoBoardError::NoPendingFound),
         };
@@ -202,11 +224,14 @@ impl GoBoard {
             return Err(GoBoardError::WrongPlayerTurn);
         }
 
-        let other_player = who.other();
+        let opponent = who.other();
 
-        self.board.set(cell.row(), cell.column(), who.into());
+        self.calculate_captures(cell, opponent)
+            .for_each(|captured| {
+                self.board.set(cell.row(), cell.column(), who.into());
+            });
 
-        self.whos_turn = other_player;
+        self.whos_turn = opponent;
 
         Ok(())
     }
@@ -280,6 +305,13 @@ impl GoBoard {
             black_captures,
             board,
         })
+    }
+
+    fn has_liberties(&self, row: usize, column: usize) -> Result<bool, &str> {
+        match self.get_liberties(row, column) {
+            Ok(c) => Ok(c.count() > 0),
+            Err(e) => Err(e),
+        }
     }
 
     fn get_liberties(
@@ -374,6 +406,52 @@ capturesB=23
                 ])
             }
         );
+    }
+
+    #[test]
+    fn test_has_liberties_true() {
+        // Given
+        let as_str = r#"
+    turn=W
+last_move=ok
+capturesW=16
+capturesB=23
+-W-W-
+WBW--
+WBBW-
+WBBbW
+WWWW-
+        "#;
+        let state = GoBoard::from_str(as_str).unwrap();
+
+        // When
+        let result = state.has_liberties(2, 1).unwrap();
+
+        // Then
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_has_liberties_false() {
+        // Given
+        let as_str = r#"
+    turn=W
+last_move=ok
+capturesW=16
+capturesB=23
+-W-W-
+W-W--
+WBBW-
+WB-bW
+WWWW-
+        "#;
+        let state = GoBoard::from_str(as_str).unwrap();
+
+        // When
+        let result = state.has_liberties(2, 1).unwrap();
+
+        // Then
+        assert!(result);
     }
 
     #[test]
