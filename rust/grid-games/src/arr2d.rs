@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::hash::Hash;
 
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
@@ -8,10 +9,10 @@ pub enum ParseError {
     InvalidValue,
 }
 
-#[derive(Debug)]
+#[derive(Eq, Hash, Debug)]
 pub struct Cell<T>
 where
-    T: TryFrom<char> + Into<char> + PartialEq + Copy,
+    T: TryFrom<char> + Into<char> + PartialEq + Copy + Hash,
 {
     id: u32,
     row: usize,
@@ -21,7 +22,7 @@ where
 
 impl<T> Cell<T>
 where
-    T: TryFrom<char> + Into<char> + PartialEq + Copy,
+    T: TryFrom<char> + Into<char> + PartialEq + Copy + Hash,
 {
     pub fn row(&self) -> usize {
         self.row
@@ -45,21 +46,21 @@ where
 
 impl<T> PartialEq for Cell<T>
 where
-    T: TryFrom<char> + Into<char> + PartialEq + Copy,
+    T: TryFrom<char> + Into<char> + PartialEq + Copy + Eq + Hash,
 {
     fn eq(&self, b: &Cell<T>) -> bool {
         self.row == b.row && self.column == b.column && self.value == b.value
     }
 }
 
-#[derive(Debug)]
-pub struct Arr2d<T: TryFrom<char> + Into<char> + PartialEq + Copy> {
+#[derive(Debug, Hash, Eq)]
+pub struct Arr2d<T: TryFrom<char> + Into<char> + PartialEq + Copy + Eq + Hash> {
     contents: Vec<Vec<Cell<T>>>,
 }
 
 impl<T> Arr2d<T>
 where
-    T: TryFrom<char, Error = ParseError> + Into<char> + PartialEq + Copy,
+    T: TryFrom<char, Error = ParseError> + Into<char> + PartialEq + Copy + Eq + Hash,
 {
     pub fn new() -> Arr2d<T> {
         Arr2d {
@@ -251,7 +252,7 @@ where
     }
 }
 
-impl<T: TryFrom<char> + Into<char> + PartialEq + Copy> PartialEq for Arr2d<T> {
+impl<T: TryFrom<char> + Into<char> + PartialEq + Copy + Eq + Hash> PartialEq for Arr2d<T> {
     fn eq(&self, other: &Self) -> bool {
         self.contents == other.contents
     }
@@ -274,7 +275,7 @@ mod tests {
             .collect()
     }
 
-    #[derive(Clone, Copy, Debug, PartialEq)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     struct TestBool(bool);
 
     impl TryFrom<char> for TestBool {

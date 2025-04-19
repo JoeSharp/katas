@@ -1,10 +1,12 @@
 use crate::arr2d::Arr2d;
 use crate::arr2d::Cell;
 use crate::arr2d::ParseError;
+use std::collections::HashMap;
 use std::fmt;
+use std::hash::Hash;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq)]
+#[derive(Hash, Eq, Debug, PartialEq, Copy, Clone)]
 enum GoPlayer {
     White,
     Black,
@@ -62,7 +64,7 @@ impl GoPlayer {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Hash, Eq, Debug, PartialEq)]
 enum LastMove {
     Ok,
     IllegalKo,
@@ -91,7 +93,7 @@ impl FromStr for LastMove {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Copy, Hash, Eq)]
 enum GoCell {
     White,
     WhitePending,
@@ -164,12 +166,11 @@ impl Into<char> for GoCell {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct GoBoard {
     whos_turn: GoPlayer,
     last_move: LastMove,
-    white_captures: u16,
-    black_captures: u16,
+    captures: HashMap<GoPlayer, u16>,
     board: Arr2d<GoCell>,
 }
 
@@ -225,11 +226,16 @@ impl GoBoard {
         }
 
         let opponent = who.other();
+        let played_cell = who.into();
+        let captures = self
+            .calculate_captures(cell, opponent)
+            .map(|c| (c.row(), c.column()))
+            .collect::<Vec<_>>();
 
-        self.calculate_captures(cell, opponent)
-            .for_each(|captured| {
-                self.board.set(cell.row(), cell.column(), who.into());
-            });
+        for (row, column) in captures {
+            self.board.set(row, column, played_cell);
+            self.captures.entry(who).and_modify(|e| *e += 1);
+        }
 
         self.whos_turn = opponent;
 
@@ -298,11 +304,14 @@ impl GoBoard {
             Err(e) => return Err(e),
         };
 
+        let mut captures: HashMap<_, _> = HashMap::new();
+        captures.insert(GoPlayer::White, white_captures);
+        captures.insert(GoPlayer::Black, black_captures);
+
         Ok(GoBoard {
             whos_turn,
             last_move,
-            white_captures,
-            black_captures,
+            captures,
             board,
         })
     }
@@ -360,8 +369,10 @@ mod tests {
             GoBoard {
                 whos_turn: GoPlayer::White,
                 last_move: LastMove::Ok,
-                white_captures: 16,
-                black_captures: 23,
+                captures: [(GoPlayer::White, 16), (GoPlayer::Black, 23)]
+                    .iter()
+                    .cloned()
+                    .collect(),
                 board: Arr2d::from_contents(vec![
                     vec![Empty, White, Empty, Empty, Empty,],
                     vec![Empty, Empty, White, Empty, Empty],
@@ -395,8 +406,10 @@ capturesB=23
             GoBoard {
                 whos_turn: GoPlayer::White,
                 last_move: LastMove::Ok,
-                white_captures: 16,
-                black_captures: 23,
+                captures: [(GoPlayer::White, 16), (GoPlayer::Black, 23)]
+                    .iter()
+                    .cloned()
+                    .collect(),
                 board: Arr2d::from_contents(vec![
                     vec![Empty, White, Empty, Empty, Empty,],
                     vec![Empty, Empty, White, Empty, Empty],

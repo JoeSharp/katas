@@ -2,7 +2,7 @@ use crate::arr2d::Arr2d;
 use crate::arr2d::ParseError;
 use std::fmt;
 
-#[derive(PartialEq, Clone, Debug, Copy)]
+#[derive(Hash, Eq, PartialEq, Clone, Debug, Copy)]
 pub enum GolCell {
     Alive,
     Dead,
