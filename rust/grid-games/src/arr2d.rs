@@ -14,15 +14,25 @@ where
     T: TryFrom<char> + Into<char> + PartialEq + Copy,
 {
     id: u32,
-    pub row: usize,
-    pub column: usize,
-    pub value: T,
+    row: usize,
+    column: usize,
+    value: T,
 }
 
 impl<T> Cell<T>
 where
     T: TryFrom<char> + Into<char> + PartialEq + Copy,
 {
+    pub fn row(&self) -> usize {
+        self.row
+    }
+    pub fn column(&self) -> usize {
+        self.column
+    }
+    pub fn value(&self) -> T {
+        self.value
+    }
+
     pub fn from(row: usize, column: usize, value: T) -> Cell<T> {
         Cell {
             id: 0,
@@ -100,6 +110,15 @@ where
         Ok(Arr2d::from_contents(rows))
     }
 
+    pub fn from_str(as_str: &str) -> Result<Arr2d<T>, ParseError> {
+        Self::from_lines(
+            as_str
+                .split("\n")
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty()),
+        )
+    }
+
     pub fn get_cell(&self, row: usize, column: usize) -> Result<&Cell<T>, &str> {
         match &self.contents.get(row) {
             Some(r) => match r.get(column) {
@@ -108,6 +127,10 @@ where
             },
             None => return Err("Invalid row index"),
         }
+    }
+
+    pub fn all_cells(&self) -> impl Iterator<Item = &Cell<T>> {
+        self.contents.iter().flat_map(|row| row.into_iter())
     }
 
     pub fn get_neighbours(&self, row: usize, column: usize) -> impl Iterator<Item = &Cell<T>> {
@@ -197,15 +220,6 @@ where
         }
 
         Arr2d::from_contents(contents)
-    }
-
-    pub fn from_str(as_str: &str) -> Result<Arr2d<T>, ParseError> {
-        Self::from_lines(
-            as_str
-                .split("\n")
-                .map(|line| line.trim())
-                .filter(|line| !line.is_empty()),
-        )
     }
 
     pub fn rows(&self) -> usize {

@@ -23,6 +23,15 @@ impl fmt::Display for GoPlayer {
     }
 }
 
+impl Into<GoCell> for GoPlayer {
+    fn into(self) -> GoCell {
+        match self {
+            GoPlayer::White => GoCell::White,
+            GoPlayer::Black => GoCell::Black,
+        }
+    }
+}
+
 impl TryFrom<char> for GoPlayer {
     type Error = ParseError;
 
@@ -91,14 +100,23 @@ enum GoCell {
     Empty,
 }
 
-impl GoCell {
-    fn player(&self) -> Option<GoPlayer> {
+#[derive(Debug)]
+pub enum GoBoardError {
+    InvalidPlayer,
+    NoPendingFound,
+    WrongPlayerTurn,
+}
+
+impl TryInto<GoPlayer> for GoCell {
+    type Error = GoBoardError;
+
+    fn try_into(self) -> Result<GoPlayer, GoBoardError> {
         match self {
-            GoCell::White => Some(GoPlayer::White),
-            GoCell::WhitePending => Some(GoPlayer::White),
-            GoCell::Black => Some(GoPlayer::Black),
-            GoCell::BlackPending => Some(GoPlayer::Black),
-            _ => None,
+            GoCell::White => Ok(GoPlayer::White),
+            GoCell::WhitePending => Ok(GoPlayer::White),
+            GoCell::Black => Ok(GoPlayer::Black),
+            GoCell::BlackPending => Ok(GoPlayer::Black),
+            _ => Err(GoBoardError::InvalidPlayer),
         }
     }
 }
@@ -162,7 +180,36 @@ impl GoBoard {
     pub const BLACK_PENDING: char = 'b';
     pub const EMPTY: char = '-';
 
-    pub fn iterate(&mut self) {}
+    pub fn iterate(&mut self) -> Result<(), GoBoardError> {
+        let cell = match self
+            .board
+            .all_cells()
+            .filter(|c| match c.value() {
+                GoCell::WhitePending | GoCell::BlackPending => true,
+                _ => false,
+            })
+            .next()
+        {
+            Some(c) => c,
+            None => return Err(GoBoardError::NoPendingFound),
+        };
+        let who: GoPlayer = match cell.value().try_into() {
+            Ok(w) => w,
+            Err(e) => return Err(e),
+        };
+
+        if who != self.whos_turn {
+            return Err(GoBoardError::WrongPlayerTurn);
+        }
+
+        let other_player = who.other();
+
+        self.board.set(cell.row(), cell.column(), who.into());
+
+        self.whos_turn = other_player;
+
+        Ok(())
+    }
 
     /**
      * It would probably be nicer if it allowed reading of K/V pairs in whatever order, put them in
@@ -241,7 +288,7 @@ impl GoBoard {
         column: usize,
     ) -> Result<impl Iterator<Item = &Cell<GoCell>>, &str> {
         match self.board.get_perimeter(row, column) {
-            Ok(p) => Ok(p.filter(|c| c.value == GoCell::Empty)),
+            Ok(p) => Ok(p.filter(|c| c.value() == GoCell::Empty)),
             _ => Err("Could not retrieve perimeter of {row}, {column}"),
         }
     }
@@ -370,7 +417,9 @@ WWWW-
         let file_before = format!("{}/1_before.txt", name);
         let file_execute = format!("{}/1_execute.txt", name);
         let mut state_before = create_go_from_test_file(&file_before).unwrap();
-        state_before.iterate();
+        if let Err(e) = state_before.iterate() {
+            panic!("Iteration Error {e:?}");
+        }
         let state_execute = create_go_from_test_file(&file_execute).unwrap();
         assert_eq!(state_before, state_execute);
     }
