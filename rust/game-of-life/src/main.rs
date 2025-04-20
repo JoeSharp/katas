@@ -16,6 +16,8 @@ struct Config {
 
 impl Config {
     fn new(mut args: impl Iterator<Item = String>) -> Result<Config, &'static str> {
+        let _bin_path = args.next().unwrap();
+
         let basefile = match args.next() {
             Some(x) => x,
             None => return Err("Did not receive a basefile"),
