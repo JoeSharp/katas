@@ -2,6 +2,7 @@ use arr2d::Arr2d;
 use arr2d::Cell;
 use arr2d::ParseError;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::hash::Hash;
 use std::str::FromStr;
@@ -211,6 +212,7 @@ impl GoBoard {
         opponent: GoPlayer,
     ) -> impl Iterator<Item = &Cell<GoCell>> {
         let opponent_cell: GoCell = opponent.into();
+        let mut seen_ids = HashSet::new();
         self.board
             .get_neighbours(from.row(), from.column())
             .filter(move |neighbour| neighbour.value() == opponent_cell)
@@ -224,6 +226,7 @@ impl GoBoard {
                     .flood_fill(captured_neighbour.row(), captured_neighbour.column())
                     .unwrap()
             })
+            .filter(move |c| seen_ids.insert(c.id()))
     }
 
     pub fn iterate(&mut self) -> Result<(), GoBoardError> {
@@ -249,6 +252,7 @@ impl GoBoard {
             .map(|c| (c.row(), c.column()))
             .collect::<Vec<_>>();
 
+        println!("Capturing {captures:?}");
         for (row, column) in captures {
             self.board.set(row, column, GoCell::Empty);
             self.captures.entry(who).and_modify(|e| *e += 1);

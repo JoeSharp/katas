@@ -36,6 +36,9 @@ impl<T> Cell<T>
 where
     T: CellValue,
 {
+    pub fn id(&self) -> u32 {
+        self.id
+    }
     pub fn row(&self) -> usize {
         self.row
     }
