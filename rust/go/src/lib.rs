@@ -3,6 +3,7 @@ use arr2d::Cell;
 use arr2d::ParseError;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::fmt;
 use std::hash::Hash;
 use std::str::FromStr;
@@ -114,6 +115,7 @@ enum GoCell {
 
 #[derive(Debug)]
 pub enum GoBoardError {
+    IllegalMove,
     InvalidPlayer,
     NoPendingFound,
     WrongPlayerTurn,
@@ -181,6 +183,7 @@ pub struct GoBoard {
     whos_turn: GoPlayer,
     last_move: LastMove,
     captures: HashMap<GoPlayer, u16>,
+    last_captures: VecDeque<String>,
     board: Arr2d<GoCell>,
 }
 
@@ -243,6 +246,29 @@ impl GoBoard {
         self.iterate()
     }
 
+    fn check_ko(&mut self, captures: &Vec<(usize, usize)>) -> Result<(), GoBoardError> {
+        if captures.len() == 0 {
+            return Ok(());
+        }
+
+        let this_str = captures
+            .iter()
+            .map(|(a, b)| format!("{},{}", a, b))
+            .collect::<Vec<String>>()
+            .join("-");
+
+        if self.last_captures.contains(&this_str) {
+            return Err(GoBoardError::IllegalMove);
+        }
+        self.last_captures.push_back(this_str);
+
+        while self.last_captures.len() > 2 {
+            self.last_captures.pop_front();
+        }
+
+        Ok(())
+    }
+
     pub fn iterate(&mut self) -> Result<(), GoBoardError> {
         let cell = match self.locate_pending() {
             Some(c) => c,
@@ -265,6 +291,12 @@ impl GoBoard {
             .calculate_captures(cell, opponent)
             .map(|c| (c.row(), c.column()))
             .collect::<Vec<_>>();
+
+        if let Err(e) = self.check_ko(&captures) {
+            self.last_move = LastMove::IllegalKo;
+            self.board.set(row, column, GoCell::Empty);
+            return Err(e);
+        }
 
         for (row, column) in captures {
             self.board.set(row, column, GoCell::Empty);
@@ -349,6 +381,7 @@ impl GoBoard {
             whos_turn,
             last_move,
             captures,
+            last_captures: VecDeque::new(),
             board,
         })
     }
@@ -434,6 +467,8 @@ mod tests {
         let state_2_execute = create_go_from_test_file("ko/simple_1/2_execute.txt").unwrap();
         let move_3 = create_move_from_test_file("ko/simple_1/3_move.txt").unwrap();
         let state_3_execute = create_go_from_test_file("ko/simple_1/3_execute.txt").unwrap();
+        let move_4 = create_move_from_test_file("ko/simple_1/4_move.txt").unwrap();
+        let state_4_execute = create_go_from_test_file("ko/simple_1/4_execute.txt").unwrap();
 
         let _ = state.iterate().unwrap();
         assert_board_equal(&state_1_execute, &state);
@@ -443,6 +478,11 @@ mod tests {
 
         let _ = state.make_move(move_3.0, move_3.1).unwrap();
         assert_board_equal(&state_3_execute, &state);
+
+        let result4 = state.make_move(move_4.0, move_4.1);
+
+        assert!(result4.is_err(), "Expected move 4 to generate an error");
+        assert_board_equal(&state_4_execute, &state);
     }
 
     #[test]
@@ -456,6 +496,7 @@ mod tests {
             GoBoard {
                 whos_turn: GoPlayer::White,
                 last_move: LastMove::Ok,
+                last_captures: VecDeque::new(),
                 captures: [(GoPlayer::White, 16), (GoPlayer::Black, 23)]
                     .iter()
                     .cloned()
@@ -493,6 +534,7 @@ capturesB=23
             GoBoard {
                 whos_turn: GoPlayer::White,
                 last_move: LastMove::Ok,
+                last_captures: VecDeque::new(),
                 captures: [(GoPlayer::White, 16), (GoPlayer::Black, 23)]
                     .iter()
                     .cloned()
