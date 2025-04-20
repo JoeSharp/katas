@@ -1,5 +1,5 @@
 turn=B
-last_move=Ok
+last_move=ok
 capturesW=2
 capturesB=3
 B-bW-

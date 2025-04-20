@@ -26,6 +26,15 @@ impl fmt::Display for GoPlayer {
     }
 }
 
+impl GoPlayer {
+    fn into_pending(self) -> GoCell {
+        match self {
+            GoPlayer::White => GoCell::WhitePending,
+            GoPlayer::Black => GoCell::BlackPending,
+        }
+    }
+}
+
 impl Into<GoCell> for GoPlayer {
     fn into(self) -> GoCell {
         match self {
@@ -229,6 +238,11 @@ impl GoBoard {
             .filter(move |c| seen_ids.insert(c.id()))
     }
 
+    pub fn make_move(&mut self, row: usize, column: usize) -> Result<(), GoBoardError> {
+        self.board.set(row, column, self.whos_turn.into_pending());
+        self.iterate()
+    }
+
     pub fn iterate(&mut self) -> Result<(), GoBoardError> {
         let cell = match self.locate_pending() {
             Some(c) => c,
@@ -252,7 +266,6 @@ impl GoBoard {
             .map(|c| (c.row(), c.column()))
             .collect::<Vec<_>>();
 
-        println!("Capturing {captures:?}");
         for (row, column) in captures {
             self.board.set(row, column, GoCell::Empty);
             self.captures.entry(who).and_modify(|e| *e += 1);
@@ -372,14 +385,64 @@ mod tests {
         assert_eq!(result, expected)
     }
 
-    fn create_go_from_test_file(name: &str) -> Result<GoBoard, ParseError> {
-        let filename = format!("resources/tests/go/{}", name);
-
-        let file_contents = &fs::read_to_string(&filename).expect(&format!(
+    fn test_file_raw_contents(basefile: &str) -> String {
+        let filename = format!("resources/tests/go/{}", basefile);
+        fs::read_to_string(&filename).expect(&format!(
             "Expected to find hardcoded test resource at {}",
             filename
-        ));
-        GoBoard::from_str(file_contents)
+        ))
+    }
+
+    fn create_go_from_test_file(basefile: &str) -> Result<GoBoard, ParseError> {
+        let file_contents = test_file_raw_contents(basefile);
+        GoBoard::from_str(&file_contents)
+    }
+
+    fn extract_coord<'a>(mut parts: impl Iterator<Item = &'a str>) -> Result<usize, ParseError> {
+        match parts.next() {
+            Some(e) => match e.trim().parse() {
+                Ok(r) => Ok(r),
+                _ => return Err(ParseError::InvalidValue),
+            },
+            None => return Err(ParseError::InvalidValue),
+        }
+    }
+
+    fn create_move_from_test_file(basefile: &str) -> Result<(usize, usize), ParseError> {
+        let file_contents = test_file_raw_contents(basefile);
+
+        let mut parts = file_contents.split(",");
+
+        let row = match extract_coord(&mut parts) {
+            Ok(r) => r,
+            Err(e) => return Err(e),
+        };
+
+        let column = match extract_coord(&mut parts) {
+            Ok(r) => r,
+            Err(e) => return Err(e),
+        };
+
+        Ok((row, column))
+    }
+
+    #[test]
+    fn test_ko_rule() {
+        let mut state = create_go_from_test_file("ko/simple_1/1_before.txt").unwrap();
+        let state_1_execute = create_go_from_test_file("ko/simple_1/1_execute.txt").unwrap();
+        let move_2 = create_move_from_test_file("ko/simple_1/2_move.txt").unwrap();
+        let state_2_execute = create_go_from_test_file("ko/simple_1/2_execute.txt").unwrap();
+        let move_3 = create_move_from_test_file("ko/simple_1/3_move.txt").unwrap();
+        let state_3_execute = create_go_from_test_file("ko/simple_1/3_execute.txt").unwrap();
+
+        let _ = state.iterate().unwrap();
+        assert_board_equal(&state_1_execute, &state);
+
+        let _ = state.make_move(move_2.0, move_2.1).unwrap();
+        assert_board_equal(&state_2_execute, &state);
+
+        let _ = state.make_move(move_3.0, move_3.1).unwrap();
+        assert_board_equal(&state_3_execute, &state);
     }
 
     #[test]

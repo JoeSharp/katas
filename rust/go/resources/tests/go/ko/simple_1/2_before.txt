@@ -1,9 +1,0 @@
-turn=W
-last_move=ok
-capturesW=2
-capturesB=3
-BwBW-
--BWB-
------
------
------
