@@ -1,4 +1,6 @@
 use std::collections::HashSet;
+use std::fmt;
+use std::fmt::Display;
 use std::hash::Hash;
 
 #[derive(Debug, PartialEq)]
@@ -9,20 +11,30 @@ pub enum ParseError {
     InvalidValue,
 }
 
+pub trait CellValue: TryFrom<char> + Into<char> + PartialEq + Copy + Hash + Display {}
+
+impl<T> CellValue for T where T: TryFrom<char> + Into<char> + PartialEq + Copy + Hash + Display {}
+
 #[derive(Eq, Hash, Debug)]
-pub struct Cell<T>
-where
-    T: TryFrom<char> + Into<char> + PartialEq + Copy + Hash,
-{
+pub struct Cell<T: CellValue> {
     id: u32,
     row: usize,
     column: usize,
     value: T,
 }
 
+impl<T> fmt::Display for Cell<T>
+where
+    T: CellValue,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}
+
 impl<T> Cell<T>
 where
-    T: TryFrom<char> + Into<char> + PartialEq + Copy + Hash,
+    T: CellValue,
 {
     pub fn row(&self) -> usize {
         self.row
@@ -46,7 +58,7 @@ where
 
 impl<T> PartialEq for Cell<T>
 where
-    T: TryFrom<char> + Into<char> + PartialEq + Copy + Eq + Hash,
+    T: CellValue,
 {
     fn eq(&self, b: &Cell<T>) -> bool {
         self.row == b.row && self.column == b.column && self.value == b.value
@@ -54,13 +66,31 @@ where
 }
 
 #[derive(Debug, Hash, Eq)]
-pub struct Arr2d<T: TryFrom<char> + Into<char> + PartialEq + Copy + Eq + Hash> {
+pub struct Arr2d<T: CellValue> {
     contents: Vec<Vec<Cell<T>>>,
+}
+
+impl<T> fmt::Display for Arr2d<T>
+where
+    T: CellValue,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for row in &self.contents {
+            for (i, val) in row.iter().enumerate() {
+                if i > 0 {
+                    write!(f, " ")?;
+                }
+                write!(f, "{}", val)?;
+            }
+            write!(f, "\n")?;
+        }
+        Ok(())
+    }
 }
 
 impl<T> Arr2d<T>
 where
-    T: TryFrom<char, Error = ParseError> + Into<char> + PartialEq + Copy + Eq + Hash,
+    T: CellValue,
 {
     pub fn new() -> Arr2d<T> {
         Arr2d {
@@ -102,7 +132,7 @@ where
             for cell in row.trim().chars() {
                 match <T>::try_from(cell) {
                     Ok(v) => cells.push(v),
-                    Err(e) => return Err(e),
+                    Err(_) => return Err(ParseError::InvalidValue),
                 }
             }
             rows.push(cells);
@@ -252,7 +282,7 @@ where
     }
 }
 
-impl<T: TryFrom<char> + Into<char> + PartialEq + Copy + Eq + Hash> PartialEq for Arr2d<T> {
+impl<T: CellValue> PartialEq for Arr2d<T> {
     fn eq(&self, other: &Self) -> bool {
         self.contents == other.contents
     }
@@ -263,6 +293,7 @@ mod tests {
     use super::Arr2d;
     use super::Cell;
     use super::ParseError;
+    use std::fmt;
     use test_case::test_case;
 
     type Coordinate = (usize, usize);
@@ -277,6 +308,12 @@ mod tests {
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     struct TestBool(bool);
+
+    impl fmt::Display for TestBool {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            write!(f, "{}", self.0)
+        }
+    }
 
     impl TryFrom<char> for TestBool {
         type Error = ParseError;

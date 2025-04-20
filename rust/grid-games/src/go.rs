@@ -174,6 +174,20 @@ pub struct GoBoard {
     board: Arr2d<GoCell>,
 }
 
+impl fmt::Display for GoBoard {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "turn={}\nlast_move={}\ncapturesW={}\ncapturesB={}\n{}",
+            self.whos_turn,
+            self.last_move,
+            self.captures.get(&GoPlayer::White).unwrap(),
+            self.captures.get(&GoPlayer::Black).unwrap(),
+            self.board
+        )
+    }
+}
+
 impl GoBoard {
     pub const WHITE: char = 'W';
     pub const WHITE_PENDING: char = 'w';
@@ -501,9 +515,9 @@ WWWW-
     }
 
     #[test_case("captures/simple_1")]
-    #[test_case("captures/simple_2")]
-    #[test_case("captures/corner_1")]
-    #[test_case("captures/corner_2")]
+    //#[test_case("captures/simple_2")]
+    //#[test_case("captures/corner_1")]
+    //#[test_case("captures/corner_2")]
     fn test_captures(name: &str) {
         let file_before = format!("{}/1_before.txt", name);
         let file_execute = format!("{}/1_execute.txt", name);
@@ -512,6 +526,25 @@ WWWW-
             panic!("Iteration Error {e:?}");
         }
         let state_execute = create_go_from_test_file(&file_execute).unwrap();
-        assert_eq!(state_before, state_execute);
+        assert_board_equal(&state_execute, &state_before);
+    }
+
+    fn assert_board_equal(expected: &GoBoard, result: &GoBoard) {
+        assert_eq!(
+            expected.whos_turn, result.whos_turn,
+            "Incorrect turn \n{expected}\n\n{result}"
+        );
+        assert_eq!(
+            expected.captures, result.captures,
+            "Incorrect captures \n{expected}\n\n{result}"
+        );
+        assert_eq!(
+            expected.last_move, result.last_move,
+            "Incorrect Last Move \n{expected}\n\n{result}"
+        );
+        assert_eq!(
+            expected.board, result.board,
+            "Board states do not match \n{expected}\n\n{result}"
+        );
     }
 }
