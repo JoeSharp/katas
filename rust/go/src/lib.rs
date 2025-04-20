@@ -521,9 +521,9 @@ WWWW-
     }
 
     #[test_case("captures/simple_1")]
-    //#[test_case("captures/simple_2")]
-    //#[test_case("captures/corner_1")]
-    //#[test_case("captures/corner_2")]
+    #[test_case("captures/simple_2")]
+    #[test_case("captures/corner_1")]
+    #[test_case("captures/corner_2")]
     fn test_captures(name: &str) {
         let file_before = format!("{}/1_before.txt", name);
         let file_execute = format!("{}/1_execute.txt", name);

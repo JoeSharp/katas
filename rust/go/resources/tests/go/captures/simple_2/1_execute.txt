@@ -1,10 +1,10 @@
 turn=B
 last_move=ok
-capturesW=6
+capturesW=7
 capturesB=3
 -----
 -WWW-
-w---W
+W---W
 -W-W-
 --W--
 
