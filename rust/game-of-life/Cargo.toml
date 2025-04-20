@@ -1,0 +1,10 @@
+[package]
+name = "game-of-life"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+arr2d= { path = "../arr2d" }
+
+[dev-dependencies]
+test-case = "*"

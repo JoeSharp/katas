@@ -1,5 +1,5 @@
-use crate::arr2d::Arr2d;
-use crate::arr2d::ParseError;
+use arr2d::Arr2d;
+use arr2d::ParseError;
 use std::fmt;
 
 #[derive(Hash, Eq, PartialEq, Clone, Debug, Copy)]

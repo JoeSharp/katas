@@ -3,7 +3,7 @@ use std::error::Error;
 use std::fs;
 use std::process;
 
-use grid_games::game_of_life::GameOfLife;
+use game_of_life::GameOfLife;
 
 use std::{io, thread, time::Duration};
 

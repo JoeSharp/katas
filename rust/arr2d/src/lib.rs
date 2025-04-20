@@ -132,7 +132,7 @@ where
             for cell in row.trim().chars() {
                 match <T>::try_from(cell) {
                     Ok(v) => cells.push(v),
-                    Err(_) => return Err(ParseError::InvalidValue),
+                    Err(_) => return Err(ParseError::InvalidCharacter),
                 }
             }
             rows.push(cells);

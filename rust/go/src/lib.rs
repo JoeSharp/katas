@@ -1,6 +1,6 @@
-use crate::arr2d::Arr2d;
-use crate::arr2d::Cell;
-use crate::arr2d::ParseError;
+use arr2d::Arr2d;
+use arr2d::Cell;
+use arr2d::ParseError;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
