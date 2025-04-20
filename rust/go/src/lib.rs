@@ -215,7 +215,8 @@ impl GoBoard {
             .get_neighbours(from.row(), from.column())
             .filter(move |neighbour| neighbour.value() == opponent_cell)
             .filter(|neighbour| {
-                self.has_liberties(neighbour.row(), neighbour.column())
+                !self
+                    .has_liberties(neighbour.row(), neighbour.column())
                     .unwrap()
             })
             .flat_map(|captured_neighbour| {
@@ -239,17 +240,22 @@ impl GoBoard {
             return Err(GoBoardError::WrongPlayerTurn);
         }
 
+        let row = cell.row();
+        let column = cell.column();
+
         let opponent = who.other();
-        let played_cell = who.into();
         let captures = self
             .calculate_captures(cell, opponent)
             .map(|c| (c.row(), c.column()))
             .collect::<Vec<_>>();
 
         for (row, column) in captures {
-            self.board.set(row, column, played_cell);
+            self.board.set(row, column, GoCell::Empty);
             self.captures.entry(who).and_modify(|e| *e += 1);
         }
+
+        let played_cell: GoCell = who.into();
+        self.board.set(row, column, played_cell);
 
         self.whos_turn = opponent;
 
