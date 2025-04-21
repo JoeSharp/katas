@@ -1,0 +1,10 @@
+turn=B
+last_move=illegal_suicidal
+capturesW=4
+capturesB=5
+-W---
+WWW--
+-----
+BB-B-
+-----
+

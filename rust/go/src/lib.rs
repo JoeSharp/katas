@@ -246,6 +246,27 @@ impl GoBoard {
         self.iterate()
     }
 
+    fn check_suicidal(
+        &self,
+        row: usize,
+        column: usize,
+        captures: &Vec<(usize, usize)>,
+    ) -> Result<(), GoBoardError> {
+        // Zero captures, and zero empty neighbours, indicates suicidal move
+        match captures.len() {
+            0 => match self
+                .board
+                .get_neighbours(row, column)
+                .filter(|c| c.value() == GoCell::Empty)
+                .count()
+            {
+                0 => Err(GoBoardError::IllegalMove),
+                _ => Ok(()),
+            },
+            _ => Ok(()),
+        }
+    }
+
     fn check_ko(&mut self, captures: &Vec<(usize, usize)>) -> Result<(), GoBoardError> {
         if captures.len() == 0 {
             return Ok(());
@@ -294,6 +315,12 @@ impl GoBoard {
 
         if let Err(e) = self.check_ko(&captures) {
             self.last_move = LastMove::IllegalKo;
+            self.board.set(row, column, GoCell::Empty);
+            return Err(e);
+        }
+
+        if let Err(e) = self.check_suicidal(row, column, &captures) {
+            self.last_move = LastMove::IllegalSuicidal;
             self.board.set(row, column, GoCell::Empty);
             return Err(e);
         }
@@ -633,13 +660,13 @@ WWWW-
     #[test_case("captures/simple_2")]
     #[test_case("captures/corner_1")]
     #[test_case("captures/corner_2")]
-    fn test_captures(name: &str) {
+    #[test_case("suicidal_move/simple_1")]
+    #[test_case("suicidal_move/simple_2")]
+    fn test_iterate(name: &str) {
         let file_before = format!("{}/1_before.txt", name);
         let file_execute = format!("{}/1_execute.txt", name);
         let mut state_before = create_go_from_test_file(&file_before).unwrap();
-        if let Err(e) = state_before.iterate() {
-            panic!("Iteration Error {e:?}");
-        }
+        let _ = state_before.iterate();
         let state_execute = create_go_from_test_file(&file_execute).unwrap();
         assert_board_equal(&state_execute, &state_before);
     }
